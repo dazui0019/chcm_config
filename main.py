@@ -45,6 +45,7 @@ SUPPORTED_SHEET_NAMES = (
     "CH_Cfg",
     "Animation_Cfg",
     "Motor_Cfg",
+    "TI_sequential",
 )
 
 
@@ -380,14 +381,19 @@ def parse_ch_cfg(worksheet: Worksheet) -> dict[str, Any]:
     }
 
 
-def find_animation_channel_headers(worksheet: Worksheet, header_row_index: int) -> list[tuple[int, str]]:
+def find_animation_channel_headers(
+    worksheet: Worksheet,
+    header_row_index: int,
+    *,
+    start_column: int = 5,
+) -> list[tuple[int, str]]:
     channel_headers: list[tuple[int, str]] = []
-    for column_index in range(5, worksheet.max_column + 1):
+    for column_index in range(start_column, worksheet.max_column + 1):
         channel_name = normalize_text(worksheet.cell(header_row_index, column_index).value)
         if channel_name and ANIMATION_CHANNEL_PATTERN.fullmatch(channel_name):
             channel_headers.append((column_index, channel_name))
     if not channel_headers:
-        raise ValueError("Animation_Cfg 中未找到 IC 通道表头。")
+        raise ValueError("未找到 IC 通道表头。")
     return channel_headers
 
 
@@ -442,11 +448,15 @@ def read_animation_channels(
     worksheet: Worksheet,
     row_index: int,
     channel_headers: list[tuple[int, str]],
+    *,
+    omit_zero: bool = False,
 ) -> dict[str, Any]:
     channels: dict[str, Any] = {}
     for column_index, channel_name in channel_headers:
         value = normalize_json_scalar(worksheet.cell(row_index, column_index).value)
         if value is not None:
+            if omit_zero and value == 0:
+                continue
             channels[channel_name] = value
     return channels
 
@@ -486,7 +496,7 @@ def parse_animation_cfg(worksheet: Worksheet) -> dict[str, Any]:
         mode_name = normalize_text(worksheet.cell(row_index, 2).value)
         time_ms = normalize_json_scalar(worksheet.cell(row_index, 3).value)
         channel_type = normalize_text(worksheet.cell(row_index, 4).value)
-        channels = read_animation_channels(worksheet, row_index, channel_headers)
+        channels = read_animation_channels(worksheet, row_index, channel_headers, omit_zero=True)
 
         if mode_name is None and time_ms is None and channel_type is None and not channels:
             finalize_animation()
@@ -538,6 +548,76 @@ def parse_animation_cfg(worksheet: Worksheet) -> dict[str, Any]:
         "animations": animations,
     }
     return result
+
+
+def parse_ti_sequential(worksheet: Worksheet) -> dict[str, Any]:
+    header_row_index = next(
+        (
+            row_index
+            for row_index in range(1, worksheet.max_row + 1)
+            if normalize_text(worksheet.cell(row_index, 1).value) == "Times(ms)"
+            and normalize_text(worksheet.cell(row_index, 2).value) == "CHANNEL"
+        ),
+        None,
+    )
+    if header_row_index is None:
+        raise ValueError("TI_sequential 中未找到 Times(ms)/CHANNEL 表头。")
+
+    channel_headers = find_animation_channel_headers(worksheet, header_row_index, start_column=3)
+    total_ic_count, channel_count_per_ic = summarize_animation_channels(channel_headers)
+    header = {
+        "time_ms": normalize_text(worksheet.cell(header_row_index, 1).value),
+        "channel_type": normalize_text(worksheet.cell(header_row_index, 2).value),
+    }
+
+    animation: dict[str, Any] | None = None
+    for row_index in range(header_row_index + 1, worksheet.max_row + 1):
+        time_ms = normalize_json_scalar(worksheet.cell(row_index, 1).value)
+        channel_type = normalize_text(worksheet.cell(row_index, 2).value)
+        channels = read_animation_channels(worksheet, row_index, channel_headers, omit_zero=True)
+
+        if time_ms is None and channel_type is None and not channels:
+            continue
+        if time_ms is None or channel_type is None:
+            raise ValueError(f"TI_sequential 第 {row_index} 行缺少 Times(ms)/CHANNEL，无法解析。")
+
+        if animation is None:
+            animation = {
+                "animation_id": 0,
+                "channel_type": channel_type,
+                "source_row_start": row_index,
+                "source_row_end": row_index,
+                "frames": [],
+            }
+        elif animation["channel_type"] != channel_type:
+            raise ValueError(
+                f"TI_sequential 第 {row_index} 行 CHANNEL 类型为 {channel_type!r}，"
+                f"与前面帧的 {animation['channel_type']!r} 不一致。"
+            )
+
+        animation["frames"].append(
+            {
+                "frame_id": len(animation["frames"]),
+                "source_row": row_index,
+                "time_ms": time_ms,
+                "channels": channels,
+            }
+        )
+        animation["source_row_end"] = row_index
+
+    if animation is None:
+        raise ValueError("TI_sequential 中未找到动画帧。")
+
+    return {
+        "parser": "ti_sequential",
+        "sheet_name_raw": worksheet.title,
+        "sheet_name": worksheet.title.strip(),
+        "total_ic_count": total_ic_count,
+        "channel_count_per_ic": channel_count_per_ic,
+        "header": header,
+        "channel_headers": [channel_name for _, channel_name in channel_headers],
+        "animation": animation,
+    }
 
 
 def extract_formula_text(worksheet: Worksheet, row_index: int, column_index: int) -> str | None:
@@ -862,6 +942,24 @@ def condense_animation_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def condense_ti_sequential(parsed: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "sheet_name": parsed["sheet_name"],
+        "total_ic_count": parsed["total_ic_count"],
+        "channel_count_per_ic": parsed["channel_count_per_ic"],
+        "animation": {
+            "channel_type": parsed["animation"]["channel_type"],
+            "frames": [
+                {
+                    "time_ms": frame["time_ms"],
+                    "channels": frame["channels"],
+                }
+                for frame in parsed["animation"]["frames"]
+            ],
+        },
+    }
+
+
 def condense_motor_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
     motor_config = {
         "safety_voltage": {
@@ -916,6 +1014,8 @@ def parse_sheet(worksheet: Worksheet, value_worksheet: Worksheet | None = None) 
         return parse_ch_cfg(worksheet)
     if sheet_name == "Animation_Cfg":
         return parse_animation_cfg(worksheet)
+    if sheet_name == "TI_sequential":
+        return parse_ti_sequential(worksheet)
     if sheet_name == "Motor_Cfg":
         return parse_motor_cfg(worksheet, value_worksheet or worksheet)
     raise ValueError(f"当前暂不支持 sheet: {worksheet.title!r}")
@@ -929,6 +1029,8 @@ def condense_sheet(parsed: dict[str, Any]) -> dict[str, Any]:
         return condense_ch_cfg(parsed)
     if parser_name == "animation_cfg":
         return condense_animation_cfg(parsed)
+    if parser_name == "ti_sequential":
+        return condense_ti_sequential(parsed)
     if parser_name == "motor_cfg":
         return condense_motor_cfg(parsed)
     raise ValueError(f"当前暂不支持 parser: {parser_name}")
@@ -1000,6 +1102,8 @@ def count_output_items(output_payload: dict[str, Any], parsed: dict[str, Any]) -
             + (1 if motor_config.get("microstep_mode") is not None else 0)
             + len(motor_config.get("afs_positions", {}))
         )
+    if "animation" in output_payload:
+        return len(output_payload["animation"].get("frames", []))
     if "positions" in output_payload and "control" in output_payload and "afs_levels" in output_payload:
         return (
             len(output_payload.get("safety_voltage_configuration", {}))
@@ -1015,6 +1119,8 @@ def count_output_items(output_payload: dict[str, Any], parsed: dict[str, Any]) -
         return len(parsed["ics"])
     if "animations" in parsed:
         return sum(len(animation.get("frames", [])) for animation in parsed["animations"])
+    if "animation" in parsed:
+        return len(parsed["animation"].get("frames", []))
     if "positions" in parsed and "control_modes" in parsed and "afs_levels" in parsed:
         return (
             len(parsed.get("safety_voltage_configuration", []))

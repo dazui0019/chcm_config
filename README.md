@@ -8,6 +8,7 @@
 - `CH_Cfg`
 - `Animation_Cfg`
 - `Motor_Cfg`
+- `TI_sequential`
 
 ## Excel 路径配置
 
@@ -113,6 +114,12 @@ uv run python main.py --sheet Animation_Cfg
 
 ```powershell
 uv run python main.py --sheet Motor_Cfg
+```
+
+转换 `TI_sequential`:
+
+```powershell
+uv run python main.py --sheet TI_sequential
 ```
 
 查看完整解析结果:
@@ -285,7 +292,44 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 - `microstep_mode` 目前保留 Excel 原值，例如 `1/8[FS]`
 - `full` 模式下会额外保留 `source_row`、表头名，以及位置公式字段，便于调试
 
+`TI_sequential` 在 `values` 模式下会输出单个动画的逐帧 PWM 通道值:
+
+```json
+{
+  "sheet_name": "TI_sequential",
+  "total_ic_count": 12,
+  "channel_count_per_ic": 24,
+  "animation": {
+    "channel_type": "PWM",
+    "frames": [
+      {
+        "time_ms": 0,
+        "channels": {
+          "IC2-CH00": 0,
+          "IC2-CH01": 0
+        }
+      },
+      {
+        "time_ms": 10,
+        "channels": {
+          "IC2-CH00": 100,
+          "IC2-CH01": 100
+        }
+      }
+    ]
+  }
+}
+```
+
+说明:
+
+- 顶层会输出总 IC 数 `total_ic_count` 和每个 IC 的通道数 `channel_count_per_ic`
+- `TI_sequential` 会按单个动画输出到 `animation`
+- 每一行都会被当作一帧，保留 `time_ms` 和该帧实际有值的通道 PWM
+- 通道值为 `0` 时不会写入 `channels`
+- `full` 模式下会额外保留 `source_row`、通道表头和动画行范围，便于调试
+
 ## 注意事项
 
-- 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg`、`Animation_Cfg` 和 `Motor_Cfg` 的解析；默认会把工作簿中存在的这四个已支持 sheet 都转换出来
+- 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg`、`Animation_Cfg`、`Motor_Cfg` 和 `TI_sequential` 的解析；默认会把工作簿中存在的这五个已支持 sheet 都转换出来
 - `xlsx/` 和 `output/` 默认被 `.gitignore` 忽略，不会自动提交到 Git
