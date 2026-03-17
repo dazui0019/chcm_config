@@ -44,6 +44,7 @@ SUPPORTED_SHEET_NAMES = (
     "HCM_PriLIN_Matrix",
     "CH_Cfg",
     "Animation_Cfg",
+    "current_config",
     "Motor_Cfg",
     "TI_sequential",
 )
@@ -620,6 +621,129 @@ def parse_ti_sequential(worksheet: Worksheet) -> dict[str, Any]:
     }
 
 
+def parse_current_config_function(
+    worksheet: Worksheet,
+    value_worksheet: Worksheet,
+    row_index: int,
+    *,
+    name_column: int,
+    dimming_column: int,
+    total_column: int,
+) -> dict[str, Any] | None:
+    function_name = normalize_text(worksheet.cell(row_index, name_column).value)
+    if function_name is None:
+        return None
+
+    function = {
+        "name": function_name,
+    }
+
+    dimming_coefficient = resolve_sheet_value(worksheet, value_worksheet, row_index, dimming_column)
+    total_coefficient = resolve_sheet_value(worksheet, value_worksheet, row_index, total_column)
+    if dimming_coefficient is not None:
+        function["dimming_coefficient"] = dimming_coefficient
+    if total_coefficient is not None:
+        function["total_coefficient"] = total_coefficient
+
+    dimming_formula = extract_formula_text(worksheet, row_index, dimming_column)
+    total_formula = extract_formula_text(worksheet, row_index, total_column)
+    if dimming_formula is not None:
+        function["dimming_coefficient_formula"] = dimming_formula
+    if total_formula is not None:
+        function["total_coefficient_formula"] = total_formula
+    return function
+
+
+def parse_current_config_channel(
+    worksheet: Worksheet,
+    value_worksheet: Worksheet,
+    row_index: int,
+) -> dict[str, Any]:
+    channel_id = normalize_text(worksheet.cell(row_index, 1).value)
+    if channel_id is None or not ANIMATION_CHANNEL_PATTERN.fullmatch(channel_id):
+        raise ValueError(f"current_config 第 {row_index} 行 CHANNEL 无效: {channel_id!r}")
+
+    channel = {
+        "source_row": row_index,
+        "channel_id": channel_id,
+        "k_factory": resolve_sheet_value(worksheet, value_worksheet, row_index, 2),
+    }
+
+    max_current = resolve_sheet_value(worksheet, value_worksheet, row_index, 3)
+    if max_current is not None:
+        channel["max_current_per_channel"] = max_current
+
+    primary_function = parse_current_config_function(
+        worksheet,
+        value_worksheet,
+        row_index,
+        name_column=4,
+        dimming_column=5,
+        total_column=6,
+    )
+    if primary_function is not None:
+        channel["primary_function"] = primary_function
+
+    fixed_current = resolve_sheet_value(worksheet, value_worksheet, row_index, 7)
+    if fixed_current is not None:
+        channel["fixed_current"] = fixed_current
+
+    secondary_function = parse_current_config_function(
+        worksheet,
+        value_worksheet,
+        row_index,
+        name_column=8,
+        dimming_column=9,
+        total_column=10,
+    )
+    if secondary_function is not None:
+        channel["secondary_function"] = secondary_function
+
+    return channel
+
+
+def parse_current_config(worksheet: Worksheet, value_worksheet: Worksheet) -> dict[str, Any]:
+    header_row_index = 1
+    first_header = normalize_text(worksheet.cell(header_row_index, 1).value)
+    if first_header != "CHANNEL":
+        raise ValueError("current_config 中未找到 CHANNEL 表头。")
+
+    headers = {
+        "channel_id": normalize_text(worksheet.cell(header_row_index, 1).value),
+        "k_factory": normalize_text(worksheet.cell(header_row_index, 2).value),
+        "max_current_per_channel": normalize_text(worksheet.cell(header_row_index, 3).value),
+        "primary_function_name": normalize_text(worksheet.cell(header_row_index, 4).value),
+        "primary_dimming_coefficient": normalize_text(worksheet.cell(header_row_index, 5).value),
+        "primary_total_coefficient": normalize_text(worksheet.cell(header_row_index, 6).value),
+        "fixed_current": normalize_text(worksheet.cell(header_row_index, 7).value),
+        "secondary_function_name": normalize_text(worksheet.cell(header_row_index, 8).value),
+        "secondary_dimming_coefficient": normalize_text(worksheet.cell(header_row_index, 9).value),
+        "secondary_total_coefficient": normalize_text(worksheet.cell(header_row_index, 10).value),
+    }
+
+    channels = [
+        parse_current_config_channel(worksheet, value_worksheet, row_index)
+        for row_index in range(header_row_index + 1, worksheet.max_row + 1)
+        if normalize_text(worksheet.cell(row_index, 1).value) is not None
+    ]
+    if not channels:
+        raise ValueError("current_config 中未找到任何通道配置。")
+
+    total_ic_count, channel_count_per_ic = summarize_animation_channels(
+        [(index, channel["channel_id"]) for index, channel in enumerate(channels, start=1)]
+    )
+
+    return {
+        "parser": "current_config",
+        "sheet_name_raw": worksheet.title,
+        "sheet_name": worksheet.title.strip(),
+        "total_ic_count": total_ic_count,
+        "channel_count_per_ic": channel_count_per_ic,
+        "headers": headers,
+        "channels": channels,
+    }
+
+
 def extract_formula_text(worksheet: Worksheet, row_index: int, column_index: int) -> str | None:
     value = worksheet.cell(row_index, column_index).value
     if not isinstance(value, str):
@@ -960,6 +1084,38 @@ def condense_ti_sequential(parsed: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def condense_current_config(parsed: dict[str, Any]) -> dict[str, Any]:
+    channels: dict[str, Any] = {}
+    for channel in parsed["channels"]:
+        channel_payload = {
+            "k_factory": channel["k_factory"],
+        }
+        if "max_current_per_channel" in channel:
+            channel_payload["max_current_per_channel"] = channel["max_current_per_channel"]
+        if "primary_function" in channel:
+            channel_payload["primary_function"] = {
+                key: value
+                for key, value in channel["primary_function"].items()
+                if not key.endswith("_formula")
+            }
+        if "fixed_current" in channel:
+            channel_payload["fixed_current"] = channel["fixed_current"]
+        if "secondary_function" in channel:
+            channel_payload["secondary_function"] = {
+                key: value
+                for key, value in channel["secondary_function"].items()
+                if not key.endswith("_formula")
+            }
+        channels[channel["channel_id"]] = channel_payload
+
+    return {
+        "sheet_name": parsed["sheet_name"],
+        "total_ic_count": parsed["total_ic_count"],
+        "channel_count_per_ic": parsed["channel_count_per_ic"],
+        "channels": channels,
+    }
+
+
 def condense_motor_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
     motor_config = {
         "safety_voltage": {
@@ -1014,6 +1170,8 @@ def parse_sheet(worksheet: Worksheet, value_worksheet: Worksheet | None = None) 
         return parse_ch_cfg(worksheet)
     if sheet_name == "Animation_Cfg":
         return parse_animation_cfg(worksheet)
+    if sheet_name == "current_config":
+        return parse_current_config(worksheet, value_worksheet or worksheet)
     if sheet_name == "TI_sequential":
         return parse_ti_sequential(worksheet)
     if sheet_name == "Motor_Cfg":
@@ -1029,6 +1187,8 @@ def condense_sheet(parsed: dict[str, Any]) -> dict[str, Any]:
         return condense_ch_cfg(parsed)
     if parser_name == "animation_cfg":
         return condense_animation_cfg(parsed)
+    if parser_name == "current_config":
+        return condense_current_config(parsed)
     if parser_name == "ti_sequential":
         return condense_ti_sequential(parsed)
     if parser_name == "motor_cfg":
@@ -1102,6 +1262,8 @@ def count_output_items(output_payload: dict[str, Any], parsed: dict[str, Any]) -
             + (1 if motor_config.get("microstep_mode") is not None else 0)
             + len(motor_config.get("afs_positions", {}))
         )
+    if parsed.get("parser") == "current_config" and "channels" in output_payload:
+        return len(output_payload["channels"])
     if "animation" in output_payload:
         return len(output_payload["animation"].get("frames", []))
     if "positions" in output_payload and "control" in output_payload and "afs_levels" in output_payload:
@@ -1121,6 +1283,8 @@ def count_output_items(output_payload: dict[str, Any], parsed: dict[str, Any]) -
         return sum(len(animation.get("frames", [])) for animation in parsed["animations"])
     if "animation" in parsed:
         return len(parsed["animation"].get("frames", []))
+    if parsed.get("parser") == "current_config":
+        return len(parsed.get("channels", []))
     if "positions" in parsed and "control_modes" in parsed and "afs_levels" in parsed:
         return (
             len(parsed.get("safety_voltage_configuration", []))

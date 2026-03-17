@@ -7,6 +7,7 @@
 - `HCM_PriLIN_Matrix`
 - `CH_Cfg`
 - `Animation_Cfg`
+- `current_config`
 - `Motor_Cfg`
 - `TI_sequential`
 
@@ -108,6 +109,12 @@ uv run python main.py --sheet CH_Cfg
 
 ```powershell
 uv run python main.py --sheet Animation_Cfg
+```
+
+转换 `current_config`:
+
+```powershell
+uv run python main.py --sheet current_config
 ```
 
 转换 `Motor_Cfg`:
@@ -242,6 +249,48 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 - 如果后续出现既不是 `unlock` 也不是 `lock` 的模式，会额外输出到 `other_animations`
 - `full` 模式下会额外保留 `animation_kind`、`source_row`、通道表头和分组行范围，便于调试
 
+`current_config` 在 `values` 模式下会按通道输出当前电流配置:
+
+```json
+{
+  "sheet_name": "current_config",
+  "total_ic_count": 12,
+  "channel_count_per_ic": 24,
+  "channels": {
+    "IC0-CH00": {
+      "k_factory": 100,
+      "max_current_per_channel": 99,
+      "primary_function": {
+        "name": "DRL",
+        "dimming_coefficient": 114,
+        "total_coefficient": 114
+      },
+      "secondary_function": {
+        "name": "PL",
+        "dimming_coefficient": 68.57,
+        "total_coefficient": 13.714
+      }
+    },
+    "IC0-CH05": {
+      "k_factory": 100,
+      "max_current_per_channel": 99,
+      "primary_function": {
+        "name": "ADAS"
+      },
+      "fixed_current": 50
+    }
+  }
+}
+```
+
+说明:
+
+- 顶层会输出总 IC 数 `total_ic_count` 和每个 IC 的通道数 `channel_count_per_ic`
+- 主要数据会放在 `channels` 下，并以 `ICx-CHyy` 作为 key，方便程序直接按通道索引
+- 每个通道会按需要输出 `k_factory`、`max_current_per_channel`、`primary_function`、`fixed_current`、`secondary_function`
+- 公式列会优先输出 Excel 缓存的计算结果，而不是原始公式字符串
+- `full` 模式下会额外保留 `source_row`、表头名和公式字段，便于调试
+
 `Motor_Cfg` 在 `values` 模式下会拆成几个配置区块输出:
 
 ```json
@@ -331,5 +380,5 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 
 ## 注意事项
 
-- 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg`、`Animation_Cfg`、`Motor_Cfg` 和 `TI_sequential` 的解析；默认会把工作簿中存在的这五个已支持 sheet 都转换出来
+- 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg`、`Animation_Cfg`、`current_config`、`Motor_Cfg` 和 `TI_sequential` 的解析；默认会把工作簿中存在的这六个已支持 sheet 都转换出来
 - `xlsx/` 和 `output/` 默认被 `.gitignore` 忽略，不会自动提交到 Git
