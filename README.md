@@ -6,6 +6,7 @@
 
 - `HCM_PriLIN_Matrix`
 - `CH_Cfg`
+- `Animation_Cfg`
 
 ## Excel 路径配置
 
@@ -101,6 +102,12 @@ uv run python main.py --output output\\all_sheets
 uv run python main.py --sheet CH_Cfg
 ```
 
+转换 `Animation_Cfg`:
+
+```powershell
+uv run python main.py --sheet Animation_Cfg
+```
+
 查看完整解析结果:
 
 ```powershell
@@ -170,7 +177,58 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 }
 ```
 
+`Animation_Cfg` 在 `values` 模式下会按动画模式分组输出每一帧的 PWM 通道值:
+
+```json
+{
+  "sheet_name": "Animation_Cfg",
+  "total_ic_count": 12,
+  "channel_count_per_ic": 24,
+  "unlock_animation_count": 1,
+  "lock_animation_count": 1,
+  "unlock_animations": [
+    {
+      "mode_name": "unlock Mode 1",
+      "channel_type": "PWM",
+      "frames": [
+        {
+          "time_ms": 0,
+          "channels": {
+            "IC6-CH11": 100
+          }
+        },
+        {
+          "time_ms": 10,
+          "channels": {
+            "IC6-CH10": 100,
+            "IC6-CH11": 100
+          }
+        }
+      ]
+    }
+  ],
+  "lock_animations": [
+    {
+      "mode_name": "lock Mode 1",
+      "channel_type": "PWM",
+      "frames": []
+    }
+  ]
+}
+```
+
+说明:
+
+- 顶层会额外输出总 IC 数 `total_ic_count` 和每个 IC 的通道数 `channel_count_per_ic`
+- 顶层会额外输出 `unlock_animation_count` 和 `lock_animation_count`
+- 动画会明确拆分到 `unlock_animations` 和 `lock_animations`，便于后续同类模式继续扩展
+- 后续每一行都会被当作一帧，保留 `time_ms` 和该帧实际有值的通道 PWM
+- 第 2 行 `K factory` 会被忽略，不会输出到 JSON
+- 会自动忽略右侧不属于 `ICx-CHyy` 的备注列
+- 如果后续出现既不是 `unlock` 也不是 `lock` 的模式，会额外输出到 `other_animations`
+- `full` 模式下会额外保留 `animation_kind`、`source_row`、通道表头和分组行范围，便于调试
+
 ## 注意事项
 
-- 当前脚本已实现 `HCM_PriLIN_Matrix` 和 `CH_Cfg` 的解析；默认会把工作簿中存在的这两个已支持 sheet 都转换出来
+- 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg` 和 `Animation_Cfg` 的解析；默认会把工作簿中存在的这三个已支持 sheet 都转换出来
 - `xlsx/` 和 `output/` 默认被 `.gitignore` 忽略，不会自动提交到 Git

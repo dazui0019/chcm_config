@@ -39,9 +39,11 @@ VALUE_LIKE_PATTERN = re.compile(
 )
 DEFAULT_MARKER_PATTERN = re.compile(r"\s*\(default\)\s*", re.IGNORECASE)
 CH_CFG_IC_PATTERN = re.compile(r"^CV_IC\d+$")
+ANIMATION_CHANNEL_PATTERN = re.compile(r"^(IC\d+)-CH(\d+)$")
 SUPPORTED_SHEET_NAMES = (
     "HCM_PriLIN_Matrix",
     "CH_Cfg",
+    "Animation_Cfg",
 )
 
 
@@ -377,6 +379,166 @@ def parse_ch_cfg(worksheet: Worksheet) -> dict[str, Any]:
     }
 
 
+def find_animation_channel_headers(worksheet: Worksheet, header_row_index: int) -> list[tuple[int, str]]:
+    channel_headers: list[tuple[int, str]] = []
+    for column_index in range(5, worksheet.max_column + 1):
+        channel_name = normalize_text(worksheet.cell(header_row_index, column_index).value)
+        if channel_name and ANIMATION_CHANNEL_PATTERN.fullmatch(channel_name):
+            channel_headers.append((column_index, channel_name))
+    if not channel_headers:
+        raise ValueError("Animation_Cfg 中未找到 IC 通道表头。")
+    return channel_headers
+
+
+def summarize_animation_channels(channel_headers: list[tuple[int, str]]) -> tuple[int, int]:
+    ic_channel_counts: dict[str, int] = {}
+    for _, channel_name in channel_headers:
+        match = ANIMATION_CHANNEL_PATTERN.fullmatch(channel_name)
+        if match is None:
+            continue
+        ic_name = match.group(1)
+        ic_channel_counts[ic_name] = ic_channel_counts.get(ic_name, 0) + 1
+
+    if not ic_channel_counts:
+        raise ValueError("Animation_Cfg 中未找到有效的 IC 通道。")
+
+    unique_channel_counts = set(ic_channel_counts.values())
+    if len(unique_channel_counts) != 1:
+        details = ", ".join(f"{ic_name}:{count}" for ic_name, count in ic_channel_counts.items())
+        raise ValueError(f"Animation_Cfg 中各 IC 通道数不一致: {details}")
+
+    return len(ic_channel_counts), next(iter(unique_channel_counts))
+
+
+def classify_animation_kind(mode_name: str) -> str:
+    normalized = mode_name.strip().lower()
+    if re.search(r"\bunlock\b", normalized):
+        return "unlock"
+    if re.search(r"\block\b", normalized):
+        return "lock"
+    return "other"
+
+
+def summarize_animation_kind_counts(animations: list[dict[str, Any]]) -> dict[str, int]:
+    return {
+        "unlock_animation_count": sum(1 for animation in animations if animation["animation_kind"] == "unlock"),
+        "lock_animation_count": sum(1 for animation in animations if animation["animation_kind"] == "lock"),
+    }
+
+
+def group_animations_by_kind(animations: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    grouped = {
+        "unlock": [],
+        "lock": [],
+        "other": [],
+    }
+    for animation in animations:
+        grouped[animation["animation_kind"]].append(animation)
+    return grouped
+
+
+def read_animation_channels(
+    worksheet: Worksheet,
+    row_index: int,
+    channel_headers: list[tuple[int, str]],
+) -> dict[str, Any]:
+    channels: dict[str, Any] = {}
+    for column_index, channel_name in channel_headers:
+        value = normalize_json_scalar(worksheet.cell(row_index, column_index).value)
+        if value is not None:
+            channels[channel_name] = value
+    return channels
+
+
+def parse_animation_cfg(worksheet: Worksheet) -> dict[str, Any]:
+    header_row_index = next(
+        (
+            row_index
+            for row_index in range(1, worksheet.max_row + 1)
+            if normalize_text(worksheet.cell(row_index, 2).value) == "MODE"
+            and normalize_text(worksheet.cell(row_index, 3).value) == "Times(ms)"
+            and normalize_text(worksheet.cell(row_index, 4).value) == "CHANNEL"
+        ),
+        None,
+    )
+    if header_row_index is None:
+        raise ValueError("Animation_Cfg 中未找到 MODE/Times(ms)/CHANNEL 表头。")
+
+    channel_headers = find_animation_channel_headers(worksheet, header_row_index)
+    total_ic_count, channel_count_per_ic = summarize_animation_channels(channel_headers)
+    header = {
+        "mode": normalize_text(worksheet.cell(header_row_index, 2).value),
+        "time_ms": normalize_text(worksheet.cell(header_row_index, 3).value),
+        "channel_type": normalize_text(worksheet.cell(header_row_index, 4).value),
+    }
+
+    animations: list[dict[str, Any]] = []
+    current_animation: dict[str, Any] | None = None
+
+    def finalize_animation() -> None:
+        nonlocal current_animation
+        if current_animation is not None:
+            animations.append(current_animation)
+            current_animation = None
+
+    for row_index in range(header_row_index + 1, worksheet.max_row + 1):
+        mode_name = normalize_text(worksheet.cell(row_index, 2).value)
+        time_ms = normalize_json_scalar(worksheet.cell(row_index, 3).value)
+        channel_type = normalize_text(worksheet.cell(row_index, 4).value)
+        channels = read_animation_channels(worksheet, row_index, channel_headers)
+
+        if mode_name is None and time_ms is None and channel_type is None and not channels:
+            finalize_animation()
+            continue
+        if channel_type == "K factory":
+            continue
+
+        if mode_name is None or time_ms is None or channel_type is None:
+            raise ValueError(f"Animation_Cfg 第 {row_index} 行缺少 MODE/Times(ms)/CHANNEL，无法解析。")
+
+        if (
+            current_animation is None
+            or current_animation["mode_name"] != mode_name
+            or current_animation["channel_type"] != channel_type
+        ):
+            finalize_animation()
+            current_animation = {
+                "animation_id": len(animations),
+                "animation_kind": classify_animation_kind(mode_name),
+                "mode_name": mode_name,
+                "channel_type": channel_type,
+                "source_row_start": row_index,
+                "source_row_end": row_index,
+                "frames": [],
+            }
+
+        current_animation["frames"].append(
+            {
+                "frame_id": len(current_animation["frames"]),
+                "source_row": row_index,
+                "time_ms": time_ms,
+                "channels": channels,
+            }
+        )
+        current_animation["source_row_end"] = row_index
+
+    finalize_animation()
+    animation_counts = summarize_animation_kind_counts(animations)
+
+    result = {
+        "parser": "animation_cfg",
+        "sheet_name_raw": worksheet.title,
+        "sheet_name": worksheet.title.strip(),
+        "total_ic_count": total_ic_count,
+        "channel_count_per_ic": channel_count_per_ic,
+        **animation_counts,
+        "header": header,
+        "channel_headers": [channel_name for _, channel_name in channel_headers],
+        "animations": animations,
+    }
+    return result
+
+
 def relabel_values(field_labels: dict[str, str], values: dict[str, str]) -> dict[str, str]:
     del field_labels
     return {
@@ -431,12 +593,44 @@ def condense_ch_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def condense_animation_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
+    grouped_animations = group_animations_by_kind(parsed["animations"])
+
+    def simplify(animation: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "mode_name": animation["mode_name"],
+            "channel_type": animation["channel_type"],
+            "frames": [
+                {
+                    "time_ms": frame["time_ms"],
+                    "channels": frame["channels"],
+                }
+                for frame in animation["frames"]
+            ],
+        }
+
+    result = {
+        "sheet_name": parsed["sheet_name"],
+        "total_ic_count": parsed["total_ic_count"],
+        "channel_count_per_ic": parsed["channel_count_per_ic"],
+        "unlock_animation_count": parsed["unlock_animation_count"],
+        "lock_animation_count": parsed["lock_animation_count"],
+        "unlock_animations": [simplify(animation) for animation in grouped_animations["unlock"]],
+        "lock_animations": [simplify(animation) for animation in grouped_animations["lock"]],
+    }
+    if grouped_animations["other"]:
+        result["other_animations"] = [simplify(animation) for animation in grouped_animations["other"]]
+    return result
+
+
 def parse_sheet(worksheet: Worksheet) -> dict[str, Any]:
     sheet_name = worksheet.title.strip()
     if sheet_name == "HCM_PriLIN_Matrix":
         return parse_hcm_prilin_matrix(worksheet)
     if sheet_name == "CH_Cfg":
         return parse_ch_cfg(worksheet)
+    if sheet_name == "Animation_Cfg":
+        return parse_animation_cfg(worksheet)
     raise ValueError(f"当前暂不支持 sheet: {worksheet.title!r}")
 
 
@@ -446,6 +640,8 @@ def condense_sheet(parsed: dict[str, Any]) -> dict[str, Any]:
         return condense_hcm_prilin_matrix(parsed)
     if parser_name == "ch_cfg":
         return condense_ch_cfg(parsed)
+    if parser_name == "animation_cfg":
+        return condense_animation_cfg(parsed)
     raise ValueError(f"当前暂不支持 parser: {parser_name}")
 
 
@@ -497,10 +693,20 @@ def count_output_items(output_payload: dict[str, Any], parsed: dict[str, Any]) -
         return len(output_payload["items"])
     if "ics" in output_payload:
         return len(output_payload["ics"])
+    if "animations" in output_payload:
+        return sum(len(animation.get("frames", [])) for animation in output_payload["animations"])
+    if "unlock_animations" in output_payload or "lock_animations" in output_payload:
+        return sum(
+            len(animation.get("frames", []))
+            for key in ("unlock_animations", "lock_animations", "other_animations")
+            for animation in output_payload.get(key, [])
+        )
     if "items" in parsed:
         return len(parsed["items"])
     if "ics" in parsed:
         return len(parsed["ics"])
+    if "animations" in parsed:
+        return sum(len(animation.get("frames", [])) for animation in parsed["animations"])
     return 0
 
 
