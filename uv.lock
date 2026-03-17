@@ -9,12 +9,14 @@ source = { virtual = "." }
 dependencies = [
     { name = "kconfiglib" },
     { name = "openpyxl" },
+    { name = "windows-curses" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "kconfiglib", specifier = ">=14.1.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
+    { name = "windows-curses", specifier = ">=2.4.1" },
 ]
 
 [[package]]
@@ -45,4 +47,13 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3d/f9/88d94a75de065ea32619465d2f77b29a0469500e99012523b91cc4141cd1/openpyxl-3.1.5.tar.gz", hash = "sha256:cf0e3cf56142039133628b5acffe8ef0c12bc902d2aadd3e0fe5878dc08d1050", size = 186464, upload-time = "2024-06-28T14:03:44.161Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c0/da/977ded879c29cbd04de313843e76868e6e13408a94ed6b987245dc7c8506/openpyxl-3.1.5-py2.py3-none-any.whl", hash = "sha256:5282c12b107bffeef825f4617dc029afaf41d0ea60823bbb665ef3079dc79de2", size = 250910, upload-time = "2024-06-28T14:03:41.161Z" },
+]
+
+[[package]]
+name = "windows-curses"
+version = "2.4.1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/25/a0/e8d074f013117633f6b502ca123ecfc377fe0bd36818fe65e8935c91ca9c/windows_curses-2.4.1-cp313-cp313-win32.whl", hash = "sha256:05d1ca01e5199a435ccb6c8c2978df4a169cdff1ec99ab15f11ded9de8e5be26", size = 71390, upload-time = "2025-01-11T00:26:27.66Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/4b/2838a829b074a68c570d54ae0ae8539979657d3e619a4dc5a4b03eb69745/windows_curses-2.4.1-cp313-cp313-win_amd64.whl", hash = "sha256:8cf653f8928af19c103ae11cfed38124f418dcdd92643c4cd17239c0cec2f9da", size = 81636, upload-time = "2025-01-11T00:26:29.595Z" },
 ]

@@ -12,3 +12,4 @@ wheels/
 # config file
 xlsx/
 output/
+.config

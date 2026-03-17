@@ -6,11 +6,15 @@ import re
 from pathlib import Path
 from typing import Any
 
+from kconfiglib import Kconfig
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
 
 WORKBOOK_DEFAULT = Path("xlsx") / "E01 CHCM-1C-2C1V(得邦)_config_Dataset_LEFT_V0.2.xlsx"
+KCONFIG_FILE = Path("Kconfig")
+KCONFIG_CONFIG_DEFAULT = Path(".config")
+KCONFIG_WORKBOOK_SYMBOL = "CHCM_WORKBOOK_PATH"
 FIELD_KEYS = {
     "C": "config_word_0",
     "D": "value_1",
@@ -50,6 +54,35 @@ def normalize_field_value(value: str | None) -> str | None:
 
 def clean_output_value(value: str) -> str:
     return DEFAULT_MARKER_PATTERN.sub("", value).strip()
+
+
+def load_workbook_path_from_kconfig(config_path: Path) -> Path | None:
+    if not KCONFIG_FILE.is_file():
+        return None
+
+    kconfig = Kconfig(str(KCONFIG_FILE), warn=False)
+    if config_path.is_file():
+        kconfig.load_config(str(config_path))
+
+    symbol = kconfig.syms.get(KCONFIG_WORKBOOK_SYMBOL)
+    if symbol is None:
+        raise ValueError(f"Kconfig 中未定义 {KCONFIG_WORKBOOK_SYMBOL}")
+
+    workbook_path = normalize_text(symbol.str_value)
+    if not workbook_path:
+        return None
+    return Path(workbook_path)
+
+
+def resolve_workbook_path(cli_workbook: Path | None, config_path: Path) -> Path:
+    if cli_workbook is not None:
+        return cli_workbook
+
+    workbook_from_kconfig = load_workbook_path_from_kconfig(config_path)
+    if workbook_from_kconfig is not None:
+        return workbook_from_kconfig
+
+    return WORKBOOK_DEFAULT
 
 
 def has_cjk(text: str) -> bool:
@@ -318,8 +351,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--workbook",
         type=Path,
-        default=WORKBOOK_DEFAULT,
-        help=f"Workbook path. Default: {WORKBOOK_DEFAULT}",
+        default=None,
+        help="Workbook path. Overrides the value loaded from .config and Kconfig.",
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=KCONFIG_CONFIG_DEFAULT,
+        help=f"Kconfig .config path. Default: {KCONFIG_CONFIG_DEFAULT}",
     )
     parser.add_argument(
         "--sheet",
@@ -343,7 +382,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
-    worksheet = find_sheet_path(args.workbook, args.sheet)
+    workbook_path = resolve_workbook_path(args.workbook, args.config)
+    worksheet = find_sheet_path(workbook_path, args.sheet)
 
     sheet_name = worksheet.title.strip()
     if sheet_name != "HCM_PriLIN_Matrix":
@@ -356,6 +396,7 @@ def main() -> None:
     item_count = len(output_payload["items"]) if "items" in output_payload else len(parsed["items"])
 
     print(f"Wrote {args.output}")
+    print(f"Workbook: {workbook_path}")
     print(f"Sheet: {parsed['sheet_name_raw']!r}")
     print(f"Items: {item_count}")
     print(f"Mode: {args.mode}")
