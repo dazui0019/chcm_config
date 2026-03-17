@@ -7,6 +7,7 @@
 - `HCM_PriLIN_Matrix`
 - `CH_Cfg`
 - `Animation_Cfg`
+- `Motor_Cfg`
 
 ## Excel 路径配置
 
@@ -106,6 +107,12 @@ uv run python main.py --sheet CH_Cfg
 
 ```powershell
 uv run python main.py --sheet Animation_Cfg
+```
+
+转换 `Motor_Cfg`:
+
+```powershell
+uv run python main.py --sheet Motor_Cfg
 ```
 
 查看完整解析结果:
@@ -228,7 +235,57 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 - 如果后续出现既不是 `unlock` 也不是 `lock` 的模式，会额外输出到 `other_animations`
 - `full` 模式下会额外保留 `animation_kind`、`source_row`、通道表头和分组行范围，便于调试
 
+`Motor_Cfg` 在 `values` 模式下会拆成几个配置区块输出:
+
+```json
+{
+  "sheet_name": "Motor_Cfg",
+  "title": "Leveling Stepper Motor Setting",
+  "motor_config": {
+    "safety_voltage": {
+      "low_voltage_v": 9,
+      "over_voltage_v": 16
+    },
+    "general_settings": {
+      "positive_command_action": "Pull"
+    },
+    "control_modes": {
+      "reference_run": {
+        "running_current": 560
+      }
+    },
+    "microstep_mode": "1/8[FS]",
+    "positions": {
+      "pos1": {
+        "label": "Mechanical Block Downward",
+        "steps_to_pos1_fs": 0,
+        "spindle_distance_to_pos1_mm": 0,
+        "wall_position_mm": -762.435789927779,
+        "angle_deg": -4.36
+      }
+    },
+    "afs_positions": {
+      "level0": {
+        "c_mode": 0,
+        "v_mode": 0,
+        "e_mode": 0
+      }
+    }
+  }
+}
+```
+
+说明:
+
+- 主要数据都会收敛到 `motor_config` 下，便于程序侧统一处理
+- 自然语言字段名会转换成稳定的 `snake_case` key
+- `positions` 和 `afs_positions` 会按 `pos1`、`level0` 这样的稳定 ID 输出为对象，而不是数组
+- `control_modes` 会按 `reference_run`、`normal_run` 这样的模式 key 分组
+- `positions` 中的公式列会优先输出 Excel 缓存的计算结果，而不是原始公式字符串
+- `microstep_mode` 目前保留 Excel 原值，例如 `1/8[FS]`
+- `full` 模式下会额外保留 `source_row`、表头名，以及位置公式字段，便于调试
+
 ## 注意事项
 
-- 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg` 和 `Animation_Cfg` 的解析；默认会把工作簿中存在的这三个已支持 sheet 都转换出来
+- 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg`、`Animation_Cfg` 和 `Motor_Cfg` 的解析；默认会把工作簿中存在的这四个已支持 sheet 都转换出来
 - `xlsx/` 和 `output/` 默认被 `.gitignore` 忽略，不会自动提交到 Git

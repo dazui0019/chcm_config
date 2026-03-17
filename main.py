@@ -44,6 +44,7 @@ SUPPORTED_SHEET_NAMES = (
     "HCM_PriLIN_Matrix",
     "CH_Cfg",
     "Animation_Cfg",
+    "Motor_Cfg",
 )
 
 
@@ -539,6 +540,244 @@ def parse_animation_cfg(worksheet: Worksheet) -> dict[str, Any]:
     return result
 
 
+def extract_formula_text(worksheet: Worksheet, row_index: int, column_index: int) -> str | None:
+    value = worksheet.cell(row_index, column_index).value
+    if not isinstance(value, str):
+        return None
+    text = value.replace("\r\n", "\n").strip()
+    if not text.startswith("="):
+        return None
+    return text
+
+
+def resolve_sheet_value(
+    worksheet: Worksheet,
+    value_worksheet: Worksheet,
+    row_index: int,
+    column_index: int,
+) -> Any:
+    resolved = normalize_json_scalar(value_worksheet.cell(row_index, column_index).value)
+    if resolved is not None:
+        return resolved
+    return normalize_json_scalar(worksheet.cell(row_index, column_index).value)
+
+
+def parse_named_value_rows(
+    worksheet: Worksheet,
+    value_worksheet: Worksheet,
+    row_indices: range,
+    *,
+    name_column: int,
+    value_column: int,
+) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for row_index in row_indices:
+        name = normalize_text(worksheet.cell(row_index, name_column).value)
+        if name is None:
+            continue
+        entry = {
+            "source_row": row_index,
+            "name": name,
+            "value": resolve_sheet_value(worksheet, value_worksheet, row_index, value_column),
+        }
+        formula = extract_formula_text(worksheet, row_index, value_column)
+        if formula is not None:
+            entry["value_formula"] = formula
+        entries.append(entry)
+    return entries
+
+
+def condense_named_value_rows(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        entry["name"]: entry["value"]
+        for entry in entries
+    }
+
+
+def parse_position_row(
+    worksheet: Worksheet,
+    value_worksheet: Worksheet,
+    row_index: int,
+) -> dict[str, Any]:
+    position = {
+        "source_row": row_index,
+        "position_name": normalize_text(worksheet.cell(row_index, 2).value),
+        "steps_to_pos1_fs": resolve_sheet_value(worksheet, value_worksheet, row_index, 3),
+        "motor_head_spindle_distance_to_pos1_mm": resolve_sheet_value(worksheet, value_worksheet, row_index, 4),
+        "position_on_wall_mm": resolve_sheet_value(worksheet, value_worksheet, row_index, 5),
+        "angle": resolve_sheet_value(worksheet, value_worksheet, row_index, 6),
+    }
+    for column_index, key in (
+        (3, "steps_to_pos1_fs"),
+        (4, "motor_head_spindle_distance_to_pos1_mm"),
+        (5, "position_on_wall_mm"),
+        (6, "angle"),
+    ):
+        formula = extract_formula_text(worksheet, row_index, column_index)
+        if formula is not None:
+            position[f"{key}_formula"] = formula
+    return position
+
+
+def parse_motor_control_modes(
+    worksheet: Worksheet,
+    value_worksheet: Worksheet,
+    row_indices: range,
+) -> list[dict[str, Any]]:
+    control_modes: list[dict[str, Any]] = []
+    current_mode: dict[str, Any] | None = None
+    for row_index in row_indices:
+        mode_name = normalize_text(worksheet.cell(row_index, 2).value)
+        parameter_name = normalize_text(worksheet.cell(row_index, 3).value)
+        if mode_name is None and parameter_name is None:
+            continue
+
+        if mode_name is not None:
+            if current_mode is not None:
+                control_modes.append(current_mode)
+            current_mode = {
+                "mode_name": mode_name,
+                "source_row_start": row_index,
+                "source_row_end": row_index,
+                "parameters": [],
+            }
+
+        if current_mode is None:
+            raise ValueError(f"Motor_Cfg 第 {row_index} 行缺少控制模式名称，无法解析。")
+        if parameter_name is None:
+            continue
+
+        parameter = {
+            "source_row": row_index,
+            "name": parameter_name,
+            "value": resolve_sheet_value(worksheet, value_worksheet, row_index, 6),
+        }
+        formula = extract_formula_text(worksheet, row_index, 6)
+        if formula is not None:
+            parameter["value_formula"] = formula
+        current_mode["parameters"].append(parameter)
+        current_mode["source_row_end"] = row_index
+
+    if current_mode is not None:
+        control_modes.append(current_mode)
+    return control_modes
+
+
+def condense_motor_control_modes(control_modes: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {
+        mode["mode_name"]: {
+            parameter["name"]: parameter["value"]
+            for parameter in mode["parameters"]
+        }
+        for mode in control_modes
+    }
+
+
+MOTOR_CFG_SAFETY_KEY_MAP = {
+    "StepperMotor_Lowvoltage(V)": "low_voltage_v",
+    "StepperMotor_Overvoltage(V)": "over_voltage_v",
+}
+MOTOR_CFG_GENERAL_KEY_MAP = {
+    "Stepper Motor Action For Positive Command": "positive_command_action",
+    "Full step for motor head spindle moves 1mm": "full_steps_per_mm",
+    "Distance ratio(command value on 10m wall/motor head spindle moves 1mm)": "wall_command_ratio_per_mm_at_10m",
+}
+MOTOR_CFG_CONTROL_MODE_KEY_MAP = {
+    "Reference Run": "reference_run",
+    "Normal Run": "normal_run",
+}
+MOTOR_CFG_CONTROL_PARAM_KEY_MAP = {
+    "Runnning Current": "running_current",
+    "Holding Current": "holding_current",
+    "MAX Acceleration Ramp": "max_acceleration_ramp",
+    "Minimum Movement Speed": "min_speed",
+    "Normal Movement speed": "normal_speed",
+    "Maximum Movement Speed": "max_speed",
+}
+
+
+def slug_ascii_key(text: str) -> str:
+    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", text.strip().lower())).strip("_")
+
+
+def map_motor_cfg_key(name: str, key_map: dict[str, str]) -> str:
+    return key_map.get(name, slug_ascii_key(name))
+
+
+def split_motor_position_name(position_name: str) -> tuple[str, str]:
+    match = re.fullmatch(r"(Pos\d+)\((.*)\)", position_name.strip())
+    if match is None:
+        return slug_ascii_key(position_name), position_name
+    return match.group(1).lower(), match.group(2).strip()
+
+
+def motor_afs_level_key(level_name: str) -> str:
+    return slug_ascii_key(level_name.removesuffix(" position"))
+
+
+def parse_motor_cfg(worksheet: Worksheet, value_worksheet: Worksheet) -> dict[str, Any]:
+    title = normalize_text(worksheet.cell(1, 1).value)
+    if title is None:
+        raise ValueError("Motor_Cfg 中未找到标题。")
+
+    position_headers = {
+        "position_name": normalize_text(worksheet.cell(8, 2).value),
+        "steps_to_pos1_fs": normalize_text(worksheet.cell(8, 3).value),
+        "motor_head_spindle_distance_to_pos1_mm": normalize_text(worksheet.cell(8, 4).value),
+        "position_on_wall_mm": normalize_text(worksheet.cell(8, 5).value),
+        "angle": normalize_text(worksheet.cell(8, 6).value),
+    }
+    afs_headers = {
+        "c_mode_position": normalize_text(worksheet.cell(28, 4).value),
+        "v_mode_position": normalize_text(worksheet.cell(28, 5).value),
+        "e_mode_position": normalize_text(worksheet.cell(28, 6).value),
+    }
+
+    positions = [parse_position_row(worksheet, value_worksheet, row_index) for row_index in range(9, 14)]
+    afs_levels = [
+        {
+            "source_row": row_index,
+            "level_name": normalize_text(worksheet.cell(row_index, 1).value),
+            "c_mode_position": resolve_sheet_value(worksheet, value_worksheet, row_index, 4),
+            "v_mode_position": resolve_sheet_value(worksheet, value_worksheet, row_index, 5),
+            "e_mode_position": resolve_sheet_value(worksheet, value_worksheet, row_index, 6),
+        }
+        for row_index in range(29, 33)
+        if normalize_text(worksheet.cell(row_index, 1).value) is not None
+    ]
+
+    return {
+        "parser": "motor_cfg",
+        "sheet_name_raw": worksheet.title,
+        "sheet_name": worksheet.title.strip(),
+        "title": title,
+        "safety_voltage_configuration": parse_named_value_rows(
+            worksheet,
+            value_worksheet,
+            range(3, 5),
+            name_column=2,
+            value_column=6,
+        ),
+        "general": parse_named_value_rows(
+            worksheet,
+            value_worksheet,
+            range(5, 8),
+            name_column=2,
+            value_column=6,
+        ),
+        "position_headers": position_headers,
+        "positions": positions,
+        "control_modes": parse_motor_control_modes(worksheet, value_worksheet, range(14, 26)),
+        "step_mode": {
+            "source_row": 26,
+            "label": normalize_text(worksheet.cell(26, 1).value),
+            "value": resolve_sheet_value(worksheet, value_worksheet, 26, 4),
+        },
+        "afs_headers": afs_headers,
+        "afs_levels": afs_levels,
+    }
+
+
 def relabel_values(field_labels: dict[str, str], values: dict[str, str]) -> dict[str, str]:
     del field_labels
     return {
@@ -623,7 +862,53 @@ def condense_animation_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def parse_sheet(worksheet: Worksheet) -> dict[str, Any]:
+def condense_motor_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
+    motor_config = {
+        "safety_voltage": {
+            map_motor_cfg_key(entry["name"], MOTOR_CFG_SAFETY_KEY_MAP): entry["value"]
+            for entry in parsed["safety_voltage_configuration"]
+        },
+        "general_settings": {
+            map_motor_cfg_key(entry["name"], MOTOR_CFG_GENERAL_KEY_MAP): entry["value"]
+            for entry in parsed["general"]
+        },
+        "control_modes": {
+            map_motor_cfg_key(mode["mode_name"], MOTOR_CFG_CONTROL_MODE_KEY_MAP): {
+                map_motor_cfg_key(parameter["name"], MOTOR_CFG_CONTROL_PARAM_KEY_MAP): parameter["value"]
+                for parameter in mode["parameters"]
+            }
+            for mode in parsed["control_modes"]
+        },
+        "microstep_mode": parsed["step_mode"]["value"],
+        "positions": {},
+        "afs_positions": {},
+    }
+
+    for position in parsed["positions"]:
+        position_key, label = split_motor_position_name(position["position_name"])
+        motor_config["positions"][position_key] = {
+            "label": label,
+            "steps_to_pos1_fs": position["steps_to_pos1_fs"],
+            "spindle_distance_to_pos1_mm": position["motor_head_spindle_distance_to_pos1_mm"],
+            "wall_position_mm": position["position_on_wall_mm"],
+            "angle_deg": position["angle"],
+        }
+
+    for level in parsed["afs_levels"]:
+        motor_config["afs_positions"][motor_afs_level_key(level["level_name"])] = {
+            "c_mode": level["c_mode_position"],
+            "v_mode": level["v_mode_position"],
+            "e_mode": level["e_mode_position"],
+        }
+
+    return {
+        "sheet_name": parsed["sheet_name"],
+        "title": parsed["title"],
+        "motor_config": motor_config,
+    }
+
+
+def parse_sheet(worksheet: Worksheet, value_worksheet: Worksheet | None = None) -> dict[str, Any]:
     sheet_name = worksheet.title.strip()
     if sheet_name == "HCM_PriLIN_Matrix":
         return parse_hcm_prilin_matrix(worksheet)
@@ -631,6 +916,8 @@ def parse_sheet(worksheet: Worksheet) -> dict[str, Any]:
         return parse_ch_cfg(worksheet)
     if sheet_name == "Animation_Cfg":
         return parse_animation_cfg(worksheet)
+    if sheet_name == "Motor_Cfg":
+        return parse_motor_cfg(worksheet, value_worksheet or worksheet)
     raise ValueError(f"当前暂不支持 sheet: {worksheet.title!r}")
 
 
@@ -642,6 +929,8 @@ def condense_sheet(parsed: dict[str, Any]) -> dict[str, Any]:
         return condense_ch_cfg(parsed)
     if parser_name == "animation_cfg":
         return condense_animation_cfg(parsed)
+    if parser_name == "motor_cfg":
+        return condense_motor_cfg(parsed)
     raise ValueError(f"当前暂不支持 parser: {parser_name}")
 
 
@@ -701,12 +990,40 @@ def count_output_items(output_payload: dict[str, Any], parsed: dict[str, Any]) -
             for key in ("unlock_animations", "lock_animations", "other_animations")
             for animation in output_payload.get(key, [])
         )
+    if "motor_config" in output_payload:
+        motor_config = output_payload["motor_config"]
+        return (
+            len(motor_config.get("safety_voltage", {}))
+            + len(motor_config.get("general_settings", {}))
+            + len(motor_config.get("positions", {}))
+            + sum(len(parameters) for parameters in motor_config.get("control_modes", {}).values())
+            + (1 if motor_config.get("microstep_mode") is not None else 0)
+            + len(motor_config.get("afs_positions", {}))
+        )
+    if "positions" in output_payload and "control" in output_payload and "afs_levels" in output_payload:
+        return (
+            len(output_payload.get("safety_voltage_configuration", {}))
+            + len(output_payload.get("general", {}))
+            + len(output_payload.get("positions", []))
+            + sum(len(parameters) for parameters in output_payload.get("control", {}).values())
+            + (1 if output_payload.get("step_mode") is not None else 0)
+            + len(output_payload.get("afs_levels", []))
+        )
     if "items" in parsed:
         return len(parsed["items"])
     if "ics" in parsed:
         return len(parsed["ics"])
     if "animations" in parsed:
         return sum(len(animation.get("frames", [])) for animation in parsed["animations"])
+    if "positions" in parsed and "control_modes" in parsed and "afs_levels" in parsed:
+        return (
+            len(parsed.get("safety_voltage_configuration", []))
+            + len(parsed.get("general", []))
+            + len(parsed.get("positions", []))
+            + sum(len(mode.get("parameters", [])) for mode in parsed.get("control_modes", []))
+            + (1 if parsed.get("step_mode") else 0)
+            + len(parsed.get("afs_levels", []))
+        )
     return 0
 
 
@@ -748,6 +1065,7 @@ def main() -> None:
     args = build_parser().parse_args()
     workbook_path = resolve_workbook_path(args.workbook, args.config)
     workbook = load_workbook(workbook_path, data_only=False)
+    value_workbook = load_workbook(workbook_path, data_only=True)
     try:
         worksheets = [find_sheet(workbook, args.sheet)] if args.sheet else find_supported_sheets(workbook)
         batch_mode = args.sheet is None
@@ -755,7 +1073,8 @@ def main() -> None:
         print(f"Workbook: {workbook_path}")
         print(f"Mode: {args.mode}")
         for worksheet in worksheets:
-            parsed = parse_sheet(worksheet)
+            value_worksheet = find_sheet(value_workbook, worksheet.title)
+            parsed = parse_sheet(worksheet, value_worksheet)
             output_payload = condense_sheet(parsed) if args.mode == "values" else parsed
             output_path = resolve_output_path(args.output, parsed["sheet_name"], multi_sheet=batch_mode)
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -766,6 +1085,7 @@ def main() -> None:
             print(f"Sheet: {parsed['sheet_name_raw']!r}")
             print(f"Items: {item_count}")
     finally:
+        value_workbook.close()
         workbook.close()
 
 
