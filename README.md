@@ -51,7 +51,7 @@ uv run python main.py
 
 - 默认从 `.config` 读取 Excel 路径
 - 如果 `.config` 不存在，则回退到 `Kconfig` 默认路径
-- 默认读取 sheet `HCM_PriLIN_Matrix`
+- 默认转换工作簿中所有当前已支持的 sheet
 - 默认输出到 `output/<sheet_name>.json`
 - sheet 名匹配时会自动忽略首尾空格
 - 默认输出精简结果，只保留配置项和实际值
@@ -64,8 +64,8 @@ uv run python main.py --config <config路径> --workbook <excel路径> --sheet <
 
 - `--config`: Kconfig 生成的 `.config` 文件路径，默认是仓库根目录下的 `.config`
 - `--workbook`: Excel 文件路径。传入后会覆盖 `.config` 中的路径配置
-- `--sheet`: sheet 名称。当前仅支持 `HCM_PriLIN_Matrix`
-- `--output`: 输出 JSON 文件路径
+- `--sheet`: sheet 名称。不传时会转换工作簿中所有当前已支持的 sheet
+- `--output`: 指定单个 sheet 时为 JSON 文件路径；未指定 `--sheet` 且批量转换时为输出目录
 - `--mode values`: 精简模式。只输出配置项和值
 - `--mode full`: 完整模式。输出解析后的完整中间结构，便于调试
 
@@ -86,7 +86,13 @@ uv run python main.py --config configs\\project_a.config
 指定输出路径:
 
 ```powershell
-uv run python main.py --output output\\hcm_prilin_matrix_values.json
+uv run python main.py --sheet HCM_PriLIN_Matrix --output output\\hcm_prilin_matrix_values.json
+```
+
+批量转换到自定义目录:
+
+```powershell
+uv run python main.py --output output\\all_sheets
 ```
 
 转换 `CH_Cfg`:
@@ -98,7 +104,7 @@ uv run python main.py --sheet CH_Cfg
 查看完整解析结果:
 
 ```powershell
-uv run python main.py --mode full --output output\\hcm_prilin_matrix_full.json
+uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm_prilin_matrix_full.json
 ```
 
 ## 当前输出格式
@@ -166,5 +172,5 @@ uv run python main.py --mode full --output output\\hcm_prilin_matrix_full.json
 
 ## 注意事项
 
-- 当前脚本已实现 `HCM_PriLIN_Matrix` 和 `CH_Cfg` 的解析
+- 当前脚本已实现 `HCM_PriLIN_Matrix` 和 `CH_Cfg` 的解析；默认会把工作簿中存在的这两个已支持 sheet 都转换出来
 - `xlsx/` 和 `output/` 默认被 `.gitignore` 忽略，不会自动提交到 Git

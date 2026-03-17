@@ -39,6 +39,10 @@ VALUE_LIKE_PATTERN = re.compile(
 )
 DEFAULT_MARKER_PATTERN = re.compile(r"\s*\(default\)\s*", re.IGNORECASE)
 CH_CFG_IC_PATTERN = re.compile(r"^CV_IC\d+$")
+SUPPORTED_SHEET_NAMES = (
+    "HCM_PriLIN_Matrix",
+    "CH_Cfg",
+)
 
 
 def normalize_text(value: Any) -> str | None:
@@ -445,14 +449,19 @@ def condense_sheet(parsed: dict[str, Any]) -> dict[str, Any]:
     raise ValueError(f"当前暂不支持 parser: {parser_name}")
 
 
-def resolve_output_path(output_path: Path | None, sheet_name: str) -> Path:
-    if output_path is not None:
+def resolve_output_path(output_path: Path | None, sheet_name: str, multi_sheet: bool = False) -> Path:
+    if output_path is None:
+        return OUTPUT_DIR / f"{sheet_name}.json"
+    if not multi_sheet:
         return output_path
-    return OUTPUT_DIR / f"{sheet_name}.json"
+    if output_path.exists() and output_path.is_file():
+        raise ValueError("未指定 --sheet 时，--output 需要是目录路径，不能是文件。")
+    if not output_path.exists() and output_path.suffix.lower() == ".json":
+        raise ValueError("未指定 --sheet 时，--output 需要是目录路径，不能是单个 JSON 文件。")
+    return output_path / f"{sheet_name}.json"
 
 
-def find_sheet_path(workbook_path: Path, requested_sheet: str) -> Worksheet:
-    workbook = load_workbook(workbook_path, data_only=False)
+def find_sheet(workbook, requested_sheet: str) -> Worksheet:
     matches = [sheet for sheet in workbook.worksheets if sheet.title.strip() == requested_sheet.strip()]
     if not matches:
         available = ", ".join(repr(sheet.title) for sheet in workbook.worksheets)
@@ -461,6 +470,38 @@ def find_sheet_path(workbook_path: Path, requested_sheet: str) -> Worksheet:
         names = ", ".join(repr(sheet.title) for sheet in matches)
         raise ValueError(f"去空格后存在重名 sheet: {names}")
     return matches[0]
+
+
+def find_supported_sheets(workbook) -> list[Worksheet]:
+    supported_sheets: list[Worksheet] = []
+    seen: dict[str, Worksheet] = {}
+    for sheet in workbook.worksheets:
+        sheet_name = sheet.title.strip()
+        if sheet_name not in SUPPORTED_SHEET_NAMES:
+            continue
+        if sheet_name in seen:
+            names = ", ".join(repr(item.title) for item in (seen[sheet_name], sheet))
+            raise ValueError(f"去空格后存在重名 sheet: {names}")
+        seen[sheet_name] = sheet
+        supported_sheets.append(sheet)
+
+    if not supported_sheets:
+        available = ", ".join(repr(sheet.title) for sheet in workbook.worksheets)
+        supported = ", ".join(repr(sheet_name) for sheet_name in SUPPORTED_SHEET_NAMES)
+        raise ValueError(f"未找到任何已支持的 sheet。已支持 sheet: {supported}。可用 sheet: {available}")
+    return supported_sheets
+
+
+def count_output_items(output_payload: dict[str, Any], parsed: dict[str, Any]) -> int:
+    if "items" in output_payload:
+        return len(output_payload["items"])
+    if "ics" in output_payload:
+        return len(output_payload["ics"])
+    if "items" in parsed:
+        return len(parsed["items"])
+    if "ics" in parsed:
+        return len(parsed["ics"])
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -479,14 +520,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--sheet",
-        default="HCM_PriLIN_Matrix",
-        help="Sheet name. Leading and trailing spaces are ignored when matching.",
+        default=None,
+        help="Sheet name. Leading and trailing spaces are ignored when matching. If omitted, converts all supported sheets.",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=None,
-        help="Output JSON path. Default: output/<sheet_name>.json",
+        help="Output JSON path for a single sheet, or output directory when converting multiple sheets. Default: output/<sheet_name>.json",
     )
     parser.add_argument(
         "--mode",
@@ -500,29 +541,26 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     workbook_path = resolve_workbook_path(args.workbook, args.config)
-    worksheet = find_sheet_path(workbook_path, args.sheet)
+    workbook = load_workbook(workbook_path, data_only=False)
+    try:
+        worksheets = [find_sheet(workbook, args.sheet)] if args.sheet else find_supported_sheets(workbook)
+        batch_mode = args.sheet is None
 
-    parsed = parse_sheet(worksheet)
-    output_payload = condense_sheet(parsed) if args.mode == "values" else parsed
-    output_path = resolve_output_path(args.output, parsed["sheet_name"])
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(output_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    if "items" in output_payload:
-        item_count = len(output_payload["items"])
-    elif "ics" in output_payload:
-        item_count = len(output_payload["ics"])
-    elif "items" in parsed:
-        item_count = len(parsed["items"])
-    elif "ics" in parsed:
-        item_count = len(parsed["ics"])
-    else:
-        item_count = 0
+        print(f"Workbook: {workbook_path}")
+        print(f"Mode: {args.mode}")
+        for worksheet in worksheets:
+            parsed = parse_sheet(worksheet)
+            output_payload = condense_sheet(parsed) if args.mode == "values" else parsed
+            output_path = resolve_output_path(args.output, parsed["sheet_name"], multi_sheet=batch_mode)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(json.dumps(output_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            item_count = count_output_items(output_payload, parsed)
 
-    print(f"Wrote {output_path}")
-    print(f"Workbook: {workbook_path}")
-    print(f"Sheet: {parsed['sheet_name_raw']!r}")
-    print(f"Items: {item_count}")
-    print(f"Mode: {args.mode}")
+            print(f"Wrote {output_path}")
+            print(f"Sheet: {parsed['sheet_name_raw']!r}")
+            print(f"Items: {item_count}")
+    finally:
+        workbook.close()
 
 
 if __name__ == "__main__":
