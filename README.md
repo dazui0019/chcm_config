@@ -5,6 +5,7 @@
 目前已支持的 sheet:
 
 - `HCM_PriLIN_Matrix`
+- `CH_Cfg`
 
 ## Excel 路径配置
 
@@ -51,7 +52,7 @@ uv run python main.py
 - 默认从 `.config` 读取 Excel 路径
 - 如果 `.config` 不存在，则回退到 `Kconfig` 默认路径
 - 默认读取 sheet `HCM_PriLIN_Matrix`
-- 默认输出到 [output/HCM_PriLIN_Matrix.json](/d:/File/MCU/车载/scripts/chcm_config/output/HCM_PriLIN_Matrix.json)
+- 默认输出到 `output/<sheet_name>.json`
 - sheet 名匹配时会自动忽略首尾空格
 - 默认输出精简结果，只保留配置项和实际值
 
@@ -88,6 +89,12 @@ uv run python main.py --config configs\\project_a.config
 uv run python main.py --output output\\hcm_prilin_matrix_values.json
 ```
 
+转换 `CH_Cfg`:
+
+```powershell
+uv run python main.py --sheet CH_Cfg
+```
+
 查看完整解析结果:
 
 ```powershell
@@ -96,7 +103,7 @@ uv run python main.py --mode full --output output\\hcm_prilin_matrix_full.json
 
 ## 当前输出格式
 
-`values` 模式下，每个配置项都会输出为:
+`HCM_PriLIN_Matrix` 在 `values` 模式下，每个配置项都会输出为:
 
 ```json
 {
@@ -137,7 +144,27 @@ uv run python main.py --mode full --output output\\hcm_prilin_matrix_full.json
 }
 ```
 
+`CH_Cfg` 在 `values` 模式下会输出配置类型说明和 12 个 IC 的通道配置:
+
+```json
+{
+  "sheet_name": "CH_Cfg",
+  "config_type_descriptions": {
+    "0": "..."
+  },
+  "ics": [
+    {
+      "ic_name": "CV_IC0",
+      "channels": {
+        "CH0": 2,
+        "CH1": 2
+      }
+    }
+  ]
+}
+```
+
 ## 注意事项
 
-- 当前脚本只实现了 `HCM_PriLIN_Matrix` 的解析
+- 当前脚本已实现 `HCM_PriLIN_Matrix` 和 `CH_Cfg` 的解析
 - `xlsx/` 和 `output/` 默认被 `.gitignore` 忽略，不会自动提交到 Git

@@ -15,6 +15,7 @@ WORKBOOK_DEFAULT = Path("xlsx") / "E01 CHCM-1C-2C1V(得邦)_config_Dataset_LEFT_
 KCONFIG_FILE = Path("Kconfig")
 KCONFIG_CONFIG_DEFAULT = Path(".config")
 KCONFIG_WORKBOOK_SYMBOL = "CHCM_WORKBOOK_PATH"
+OUTPUT_DIR = Path("output")
 FIELD_KEYS = {
     "C": "config_word_0",
     "D": "value_1",
@@ -37,6 +38,7 @@ VALUE_LIKE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 DEFAULT_MARKER_PATTERN = re.compile(r"\s*\(default\)\s*", re.IGNORECASE)
+CH_CFG_IC_PATTERN = re.compile(r"^CV_IC\d+$")
 
 
 def normalize_text(value: Any) -> str | None:
@@ -54,6 +56,20 @@ def normalize_field_value(value: str | None) -> str | None:
 
 def clean_output_value(value: str) -> str:
     return DEFAULT_MARKER_PATTERN.sub("", value).strip()
+
+
+def normalize_json_scalar(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if value.is_integer() else value
+
+    text = clean_output_value(str(value).replace("\r\n", "\n").strip())
+    return text or None
 
 
 def load_workbook_path_from_kconfig(config_path: Path) -> Path | None:
@@ -295,6 +311,68 @@ def parse_hcm_prilin_matrix(worksheet: Worksheet) -> dict[str, Any]:
     return result
 
 
+def parse_ch_cfg(worksheet: Worksheet) -> dict[str, Any]:
+    header_row_index = next(
+        (row_index for row_index in range(1, worksheet.max_row + 1) if normalize_text(worksheet[f"A{row_index}"].value) == "IC.NO"),
+        None,
+    )
+    if header_row_index is None:
+        raise ValueError("CH_Cfg 中未找到 IC.NO 表头。")
+
+    channel_headers: list[tuple[int, str]] = []
+    for column_index in range(2, worksheet.max_column + 1):
+        channel_name = normalize_text(worksheet.cell(header_row_index, column_index).value)
+        if channel_name is not None:
+            channel_headers.append((column_index, channel_name))
+
+    ics: list[dict[str, Any]] = []
+    for row_index in range(header_row_index + 1, worksheet.max_row + 1):
+        ic_name = normalize_text(worksheet.cell(row_index, 1).value)
+        if not ic_name or not CH_CFG_IC_PATTERN.fullmatch(ic_name):
+            continue
+
+        channels: dict[str, Any] = {}
+        for column_index, channel_name in channel_headers:
+            value = normalize_json_scalar(worksheet.cell(row_index, column_index).value)
+            if value is not None:
+                channels[channel_name] = value
+
+        ics.append(
+            {
+                "ic_id": len(ics),
+                "source_row": row_index,
+                "ic_name": ic_name,
+                "channels": channels,
+            }
+        )
+
+    config_header_row_index = next(
+        (row_index for row_index in range(1, worksheet.max_row + 1) if normalize_text(worksheet[f"B{row_index}"].value) == "配置类型说明"),
+        None,
+    )
+    config_type_descriptions: dict[str, str] = {}
+    if config_header_row_index is not None:
+        for row_index in range(config_header_row_index + 1, worksheet.max_row + 1):
+            code = normalize_json_scalar(worksheet.cell(row_index, 2).value)
+            description = normalize_text(worksheet.cell(row_index, 3).value)
+            if code is None:
+                if config_type_descriptions:
+                    break
+                continue
+            if description is None:
+                continue
+            config_type_descriptions[str(code)] = description
+
+    return {
+        "parser": "ch_cfg",
+        "sheet_name_raw": worksheet.title,
+        "sheet_name": worksheet.title.strip(),
+        "channel_headers": [channel_name for _, channel_name in channel_headers],
+        "config_type_descriptions": config_type_descriptions,
+        "ics": ics,
+    }
+
+
 def relabel_values(field_labels: dict[str, str], values: dict[str, str]) -> dict[str, str]:
     del field_labels
     return {
@@ -334,6 +412,45 @@ def condense_hcm_prilin_matrix(parsed: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def condense_ch_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "sheet_name": parsed["sheet_name"],
+        "config_type_descriptions": parsed["config_type_descriptions"],
+        "ics": [
+            {
+                "ic_id": ic["ic_id"],
+                "ic_name": ic["ic_name"],
+                "channels": ic["channels"],
+            }
+            for ic in parsed["ics"]
+        ],
+    }
+
+
+def parse_sheet(worksheet: Worksheet) -> dict[str, Any]:
+    sheet_name = worksheet.title.strip()
+    if sheet_name == "HCM_PriLIN_Matrix":
+        return parse_hcm_prilin_matrix(worksheet)
+    if sheet_name == "CH_Cfg":
+        return parse_ch_cfg(worksheet)
+    raise ValueError(f"当前暂不支持 sheet: {worksheet.title!r}")
+
+
+def condense_sheet(parsed: dict[str, Any]) -> dict[str, Any]:
+    parser_name = parsed["parser"]
+    if parser_name == "hcm_prilin_matrix":
+        return condense_hcm_prilin_matrix(parsed)
+    if parser_name == "ch_cfg":
+        return condense_ch_cfg(parsed)
+    raise ValueError(f"当前暂不支持 parser: {parser_name}")
+
+
+def resolve_output_path(output_path: Path | None, sheet_name: str) -> Path:
+    if output_path is not None:
+        return output_path
+    return OUTPUT_DIR / f"{sheet_name}.json"
+
+
 def find_sheet_path(workbook_path: Path, requested_sheet: str) -> Worksheet:
     workbook = load_workbook(workbook_path, data_only=False)
     matches = [sheet for sheet in workbook.worksheets if sheet.title.strip() == requested_sheet.strip()]
@@ -368,8 +485,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("output") / "HCM_PriLIN_Matrix.json",
-        help="Output JSON path.",
+        default=None,
+        help="Output JSON path. Default: output/<sheet_name>.json",
     )
     parser.add_argument(
         "--mode",
@@ -385,17 +502,23 @@ def main() -> None:
     workbook_path = resolve_workbook_path(args.workbook, args.config)
     worksheet = find_sheet_path(workbook_path, args.sheet)
 
-    sheet_name = worksheet.title.strip()
-    if sheet_name != "HCM_PriLIN_Matrix":
-        raise ValueError(f"当前仅支持 HCM_PriLIN_Matrix，实际匹配到 {worksheet.title!r}")
+    parsed = parse_sheet(worksheet)
+    output_payload = condense_sheet(parsed) if args.mode == "values" else parsed
+    output_path = resolve_output_path(args.output, parsed["sheet_name"])
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(output_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    if "items" in output_payload:
+        item_count = len(output_payload["items"])
+    elif "ics" in output_payload:
+        item_count = len(output_payload["ics"])
+    elif "items" in parsed:
+        item_count = len(parsed["items"])
+    elif "ics" in parsed:
+        item_count = len(parsed["ics"])
+    else:
+        item_count = 0
 
-    parsed = parse_hcm_prilin_matrix(worksheet)
-    output_payload = condense_hcm_prilin_matrix(parsed) if args.mode == "values" else parsed
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(output_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    item_count = len(output_payload["items"]) if "items" in output_payload else len(parsed["items"])
-
-    print(f"Wrote {args.output}")
+    print(f"Wrote {output_path}")
     print(f"Workbook: {workbook_path}")
     print(f"Sheet: {parsed['sheet_name_raw']!r}")
     print(f"Items: {item_count}")
