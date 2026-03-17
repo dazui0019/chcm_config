@@ -16,6 +16,7 @@ KCONFIG_FILE = Path("Kconfig")
 KCONFIG_CONFIG_DEFAULT = Path(".config")
 KCONFIG_WORKBOOK_SYMBOL = "CHCM_WORKBOOK_PATH"
 OUTPUT_DIR = Path("output")
+OUTPUT_SCHEMA_VERSION = 2
 FIELD_KEYS = {
     "C": "config_word_0",
     "D": "value_1",
@@ -40,6 +41,8 @@ VALUE_LIKE_PATTERN = re.compile(
 DEFAULT_MARKER_PATTERN = re.compile(r"\s*\(default\)\s*", re.IGNORECASE)
 CH_CFG_IC_PATTERN = re.compile(r"^CV_IC\d+$")
 ANIMATION_CHANNEL_PATTERN = re.compile(r"^(IC\d+)-CH(\d+)$")
+INTEGER_TEXT_PATTERN = re.compile(r"^[+-]?\d+$")
+FLOAT_TEXT_PATTERN = re.compile(r"^[+-]?(?:\d+\.\d+|\d+\.\d*|\.\d+)$")
 SUPPORTED_SHEET_NAMES = (
     "HCM_PriLIN_Matrix",
     "CH_Cfg",
@@ -67,6 +70,27 @@ def clean_output_value(value: str) -> str:
     return DEFAULT_MARKER_PATTERN.sub("", value).strip()
 
 
+def coerce_output_scalar(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if value.is_integer() else value
+
+    text = clean_output_value(str(value).replace("\r\n", "\n").strip())
+    if not text:
+        return None
+    if INTEGER_TEXT_PATTERN.fullmatch(text):
+        return int(text)
+    if FLOAT_TEXT_PATTERN.fullmatch(text):
+        number = float(text)
+        return int(number) if number.is_integer() else number
+    return text
+
+
 def normalize_json_scalar(value: Any) -> Any:
     if value is None:
         return None
@@ -79,6 +103,13 @@ def normalize_json_scalar(value: Any) -> Any:
 
     text = clean_output_value(str(value).replace("\r\n", "\n").strip())
     return text or None
+
+
+def with_output_schema(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": OUTPUT_SCHEMA_VERSION,
+        **payload,
+    }
 
 
 def load_workbook_path_from_kconfig(config_path: Path) -> Path | None:
@@ -985,7 +1016,7 @@ def parse_motor_cfg(worksheet: Worksheet, value_worksheet: Worksheet) -> dict[st
 def relabel_values(field_labels: dict[str, str], values: dict[str, str]) -> dict[str, str]:
     del field_labels
     return {
-        OUTPUT_VALUE_KEYS[key]: clean_output_value(value)
+        OUTPUT_VALUE_KEYS[key]: coerce_output_scalar(value)
         for key, value in values.items()
         if value is not None
     }
@@ -999,41 +1030,66 @@ def option_to_value_row(item: dict[str, Any], option: dict[str, Any]) -> dict[st
 def condense_hcm_prilin_matrix(parsed: dict[str, Any]) -> dict[str, Any]:
     condensed_items: list[dict[str, Any]] = []
     for item in parsed["items"]:
-        condensed_item = {
-            "id": item["id"],
-            "name": item["name"],
-        }
-
+        entries: list[dict[str, Any]]
         defaults = item.get("defaults", {})
         options = item.get("options", [])
         if defaults:
-            condensed_item["values"] = relabel_values(item.get("field_labels", {}), defaults)
+            entries = [relabel_values(item.get("field_labels", {}), defaults)]
         elif options:
-            condensed_item["values"] = [option_to_value_row(item, option) for option in options]
+            entries = [option_to_value_row(item, option) for option in options]
         else:
-            condensed_item["values"] = {}
+            entries = []
+
+        condensed_item = {
+            "id": item["id"],
+            "name": item["name"],
+            "entries": entries,
+        }
 
         condensed_items.append(condensed_item)
 
-    return {
+    return with_output_schema({
         "sheet_name": parsed["sheet_name"],
+        "item_count": len(condensed_items),
         "items": condensed_items,
-    }
+        "items_by_id": {
+            str(item["id"]): item
+            for item in condensed_items
+        },
+    })
+
+
+def normalize_ch_cfg_ic_name(ic_name: str) -> str:
+    match = CH_CFG_IC_PATTERN.fullmatch(ic_name)
+    if match is None:
+        raise ValueError(f"CH_Cfg 中存在无效 IC 名称: {ic_name!r}")
+    return ic_name.removeprefix("CV_")
+
+
+def normalize_ch_cfg_channel_name(channel_name: str) -> str:
+    match = re.fullmatch(r"CH(\d+)", channel_name)
+    if match is None:
+        raise ValueError(f"CH_Cfg 中存在无效通道名称: {channel_name!r}")
+    return f"CH{int(match.group(1)):02d}"
+
+
+def build_ch_cfg_channel_id(ic_name: str, channel_name: str) -> str:
+    return f"{normalize_ch_cfg_ic_name(ic_name)}-{normalize_ch_cfg_channel_name(channel_name)}"
 
 
 def condense_ch_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
-    return {
+    channels: dict[str, Any] = {}
+    for ic in parsed["ics"]:
+        for channel_name, config_type in ic["channels"].items():
+            channels[build_ch_cfg_channel_id(ic["ic_name"], channel_name)] = config_type
+
+    return with_output_schema({
         "sheet_name": parsed["sheet_name"],
+        "ic_count": len(parsed["ics"]),
+        "channel_count": len(channels),
         "config_type_descriptions": parsed["config_type_descriptions"],
-        "ics": [
-            {
-                "ic_id": ic["ic_id"],
-                "ic_name": ic["ic_name"],
-                "channels": ic["channels"],
-            }
-            for ic in parsed["ics"]
-        ],
-    }
+        "channels": channels,
+    })
 
 
 def condense_animation_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
@@ -1052,25 +1108,27 @@ def condense_animation_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
             ],
         }
 
-    result = {
+    result = with_output_schema({
         "sheet_name": parsed["sheet_name"],
         "total_ic_count": parsed["total_ic_count"],
         "channel_count_per_ic": parsed["channel_count_per_ic"],
+        "animation_count": len(parsed["animations"]),
         "unlock_animation_count": parsed["unlock_animation_count"],
         "lock_animation_count": parsed["lock_animation_count"],
         "unlock_animations": [simplify(animation) for animation in grouped_animations["unlock"]],
         "lock_animations": [simplify(animation) for animation in grouped_animations["lock"]],
-    }
+    })
     if grouped_animations["other"]:
         result["other_animations"] = [simplify(animation) for animation in grouped_animations["other"]]
     return result
 
 
 def condense_ti_sequential(parsed: dict[str, Any]) -> dict[str, Any]:
-    return {
+    return with_output_schema({
         "sheet_name": parsed["sheet_name"],
         "total_ic_count": parsed["total_ic_count"],
         "channel_count_per_ic": parsed["channel_count_per_ic"],
+        "animation_count": 1,
         "animation": {
             "channel_type": parsed["animation"]["channel_type"],
             "frames": [
@@ -1081,7 +1139,7 @@ def condense_ti_sequential(parsed: dict[str, Any]) -> dict[str, Any]:
                 for frame in parsed["animation"]["frames"]
             ],
         },
-    }
+    })
 
 
 def condense_current_config(parsed: dict[str, Any]) -> dict[str, Any]:
@@ -1108,12 +1166,13 @@ def condense_current_config(parsed: dict[str, Any]) -> dict[str, Any]:
             }
         channels[channel["channel_id"]] = channel_payload
 
-    return {
+    return with_output_schema({
         "sheet_name": parsed["sheet_name"],
         "total_ic_count": parsed["total_ic_count"],
         "channel_count_per_ic": parsed["channel_count_per_ic"],
+        "channel_count": len(channels),
         "channels": channels,
-    }
+    })
 
 
 def condense_motor_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
@@ -1155,11 +1214,11 @@ def condense_motor_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
             "e_mode": level["e_mode_position"],
         }
 
-    return {
+    return with_output_schema({
         "sheet_name": parsed["sheet_name"],
         "title": parsed["title"],
         "motor_config": motor_config,
-    }
+    })
 
 
 def parse_sheet(worksheet: Worksheet, value_worksheet: Worksheet | None = None) -> dict[str, Any]:
@@ -1262,6 +1321,8 @@ def count_output_items(output_payload: dict[str, Any], parsed: dict[str, Any]) -
             + (1 if motor_config.get("microstep_mode") is not None else 0)
             + len(motor_config.get("afs_positions", {}))
         )
+    if parsed.get("parser") == "ch_cfg" and "channels" in output_payload:
+        return len(output_payload["channels"])
     if parsed.get("parser") == "current_config" and "channels" in output_payload:
         return len(output_payload["channels"])
     if "animation" in output_payload:

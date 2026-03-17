@@ -137,17 +137,22 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 
 ## 当前输出格式
 
+所有 `values` 模式输出的顶层都会包含 `schema_version`，便于程序侧做格式兼容。
+
 `HCM_PriLIN_Matrix` 在 `values` 模式下，每个配置项都会输出为:
 
 ```json
 {
+  "schema_version": 2,
   "id": 12,
   "name": "日行灯降额配置",
-  "values": {
-    "value_1": "120",
-    "value_2": "110",
-    "value_3": "75"
-  }
+  "entries": [
+    {
+      "value_1": 120,
+      "value_2": 110,
+      "value_3": 75
+    }
+  ]
 }
 ```
 
@@ -157,54 +162,63 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 - Excel 中 C、D、E 三列统一映射成 `value_1`、`value_2`、`value_3`
 - 值中的 `(default)` 标记会被移除
 - 如果某个配置项只用了部分列，只输出实际有值的字段
-- 如果某个配置项本身是一组表格数据，`values` 会输出为数组
+- 每个配置项统一使用 `entries` 数组，避免程序侧再区分对象和数组两种类型
+- 纯数字文本会优先转换成数值类型，方便程序直接读取
+- 顶层还会输出 `items_by_id`，便于程序直接按配置项 ID 索引
 
 表格型配置项示例:
 
 ```json
 {
+  "schema_version": 2,
   "id": 17,
   "name": "直流电机四档电压值配置",
-  "values": [
+  "entries": [
     {
-      "value_1": "0",
-      "value_2": "57.8"
+      "value_1": 0,
+      "value_2": 57.8
     },
     {
-      "value_1": "1",
-      "value_2": "49.7"
+      "value_1": 1,
+      "value_2": 49.7
     }
   ]
 }
 ```
 
-`CH_Cfg` 在 `values` 模式下会输出配置类型说明和 12 个 IC 的通道配置:
+`CH_Cfg` 在 `values` 模式下会输出扁平化后的通道配置映射:
 
 ```json
 {
+  "schema_version": 2,
   "sheet_name": "CH_Cfg",
+  "ic_count": 12,
+  "channel_count": 111,
   "config_type_descriptions": {
     "0": "..."
   },
-  "ics": [
-    {
-      "ic_name": "CV_IC0",
-      "channels": {
-        "CH0": 2,
-        "CH1": 2
-      }
-    }
-  ]
+  "channels": {
+    "IC0-CH00": 2,
+    "IC0-CH01": 2
+  }
 }
 ```
+
+说明:
+
+- 通道 key 已统一成 `ICx-CHyy`，便于和 `Animation_Cfg`、`TI_sequential`、`current_config` 直接关联
+- `channels` 使用扁平对象而不是 `ics` 数组，程序可以直接按通道 ID 索引
+- 配置类型说明仍然保留在 `config_type_descriptions`
 
 `Animation_Cfg` 在 `values` 模式下会按动画模式分组输出每一帧的 PWM 通道值:
 
 ```json
 {
+  "schema_version": 2,
   "sheet_name": "Animation_Cfg",
   "total_ic_count": 12,
   "channel_count_per_ic": 24,
+  "animation_count": 2,
   "unlock_animation_count": 1,
   "lock_animation_count": 1,
   "unlock_animations": [
@@ -253,9 +267,11 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 
 ```json
 {
+  "schema_version": 2,
   "sheet_name": "current_config",
   "total_ic_count": 12,
   "channel_count_per_ic": 24,
+  "channel_count": 288,
   "channels": {
     "IC0-CH00": {
       "k_factory": 100,
@@ -295,6 +311,7 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 
 ```json
 {
+  "schema_version": 2,
   "sheet_name": "Motor_Cfg",
   "title": "Leveling Stepper Motor Setting",
   "motor_config": {
@@ -345,9 +362,11 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 
 ```json
 {
+  "schema_version": 2,
   "sheet_name": "TI_sequential",
   "total_ic_count": 12,
   "channel_count_per_ic": 24,
+  "animation_count": 1,
   "animation": {
     "channel_type": "PWM",
     "frames": [
