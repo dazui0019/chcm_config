@@ -440,7 +440,34 @@ typedef struct
     uint16_t config_word2;
 }CHCM_Cfg_T;
 
-@CHCM_CFG_INDEX_DEFINITIONS@
+#define CHCM_CFG_IDX_0_INACTIVE                ( @CHCM_CFG_IDX_0_INACTIVE@U )
+#define CHCM_CFG_IDX_1_SIGNAL_LED_CURRENT      ( @CHCM_CFG_IDX_1_SIGNAL_LED_CURRENT@U )
+#define CHCM_CFG_IDX_2_LSD_OUT1                ( @CHCM_CFG_IDX_2_LSD_OUT1@U )
+#define CHCM_CFG_IDX_3_LSD_OUT2                ( @CHCM_CFG_IDX_3_LSD_OUT2@U )
+#define CHCM_CFG_IDX_4_HSD_OUT1                ( @CHCM_CFG_IDX_4_HSD_OUT1@U )
+#define CHCM_CFG_IDX_5_HSD_OUT2                ( @CHCM_CFG_IDX_5_HSD_OUT2@U )
+#define CHCM_CFG_IDX_6_HSD_OUT3                ( @CHCM_CFG_IDX_6_HSD_OUT3@U )
+#define CHCM_CFG_IDX_7_HSD_OUT4                ( @CHCM_CFG_IDX_7_HSD_OUT4@U )/**< only used in A++ project */
+#define CHCM_CFG_IDX_8_LSD_IN1                 ( @CHCM_CFG_IDX_8_LSD_IN1@U )/**< only used in A++ project */
+#define CHCM_CFG_IDX_9_LSD_IN2                 ( @CHCM_CFG_IDX_9_LSD_IN2@U )
+#define CHCM_CFG_IDX_10_BUCK_CV                ( @CHCM_CFG_IDX_10_BUCK_CV@U )
+#define CHCM_CFG_IDX_11_PL_DUTY                ( @CHCM_CFG_IDX_11_PL_DUTY@U )
+#define CHCM_CFG_IDX_12_DRL_NTC_DERATE         ( @CHCM_CFG_IDX_12_DRL_NTC_DERATE@U )
+#define CHCM_CFG_IDX_13_LB_NTC_DERATE          ( @CHCM_CFG_IDX_13_LB_NTC_DERATE@U )
+#define CHCM_CFG_IDX_14_HB_NTC_DERATE          ( @CHCM_CFG_IDX_14_HB_NTC_DERATE@U )
+#define CHCM_CFG_IDX_15_PL_DELAY               ( @CHCM_CFG_IDX_15_PL_DELAY@U )/**< not used */
+#define CHCM_CFG_IDX_16_AFS_TYPE               ( @CHCM_CFG_IDX_16_AFS_TYPE@U )
+#define CHCM_CFG_IDX_17_DC_MOTOR_LEVEL         ( @CHCM_CFG_IDX_17_DC_MOTOR_LEVEL@U )
+#define CHCM_CFG_IDX_18_STEP_MOTOR_INIT_DIR    ( @CHCM_CFG_IDX_18_STEP_MOTOR_INIT_DIR@U )
+#define CHCM_CFG_IDX_19_STEP_MOTOR_BLOCK_STEPS ( @CHCM_CFG_IDX_19_STEP_MOTOR_BLOCK_STEPS@U )
+#define CHCM_CFG_IDX_20_RESERVED_20            ( @CHCM_CFG_IDX_20_RESERVED_20@U ) 
+#define CHCM_CFG_IDX_21_RESERVED_21            ( @CHCM_CFG_IDX_21_RESERVED_21@U )
+#define CHCM_CFG_IDX_22_RESERVED_22            ( @CHCM_CFG_IDX_22_RESERVED_22@U )
+#define CHCM_CFG_IDX_23_RESERVED_23            ( @CHCM_CFG_IDX_23_RESERVED_23@U )
+#define CHCM_CFG_IDX_24_RESERVED_24            ( @CHCM_CFG_IDX_24_RESERVED_24@U )
+#define CHCM_CFG_IDX_25_RESERVED_25            ( @CHCM_CFG_IDX_25_RESERVED_25@U )
+#define CHCM_CFG_IDX_26_RESERVED_26            ( @CHCM_CFG_IDX_26_RESERVED_26@U )
+#define CHCM_CFG_IDX_MAX                       ( @CHCM_CFG_IDX_MAX@U )
 
 #if EEA_X == VERSION_V5
    #define LOUDNESS_55HZ_IDX   ( 0U )
