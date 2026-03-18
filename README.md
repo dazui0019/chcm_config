@@ -237,6 +237,12 @@ uv run python render_app_config.py --context <context.json> --header-template <h
 `build_render_context.py` 生成的 `render_context.json` 会同时保留原始 `excel` / `kconfig` 数据，以及模板渲染用的 `placeholders` / `sections`。
 render context JSON 推荐结构可参考 [templates/README.md](templates/README.md)。
 
+## TODO
+
+- 评估是否把 `CHCM_CFG_IDX_MAX` 改为 Kconfig 可配置项，用它动态控制 `CHCM` 尾部 `RESERVED` 数量。
+- 如果启用这个方案，需要同时调整 `build_render_context.py`、`templates/app_config.h.tpl` 和 `CHCM_Cfg[]` 生成逻辑，不能只修改 `CHCM_CFG_IDX_MAX` 一个值。
+- 预期方向是以 Excel 实际 CFG 数量作为前半段固定项，再由 `CHCM_CFG_IDX_MAX` 推导尾部 `RESERVED` 数量；当配置值小于 Excel 实际项数量时，脚本应直接报错。
+
 ## 当前输出格式
 
 所有输出结果的顶层都会包含 `schema_version`，便于程序侧做格式兼容。
