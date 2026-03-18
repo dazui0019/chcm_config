@@ -33,6 +33,29 @@ SCALAR_DEFAULTS = {
     "TI_SWEEP_STEP_MAX": 0,
     "TI_SEEP_ANIMATION_MODE": 2,
 }
+CHCM_CFG_ITEM_COUNT = 27
+CHCM_CFG_DEFAULT_NAME = {
+    0: "Inactive",
+    1: "信号灯LED额定电流",
+    2: "LSD_Out1功能配置",
+    3: "LSD_Out2功能配置",
+    4: "HSD OUT1功能配置",
+    5: "HSD OUT2功能配置",
+    6: "HSD OUT3功能配置",
+    7: "HSD OUT4功能配置",
+    8: "LSD_IN1功能配置",
+    9: "LSD_IN2功能配置",
+    10: "BUCK CV芯片电压调整功能",
+    11: "位置灯电流占空比设定",
+    12: "日行灯降额配置",
+    13: "近光灯降额配置",
+    14: "远光灯降额配置",
+    15: "位置灯延时配置",
+    16: "高度调节电机类型",
+    17: "直流电机四档电压值配置",
+    18: "步进电机初始化运动配置",
+    19: "步进电机堵转点到对应档位运动步数",
+}
 
 
 def load_json(path: Path) -> Any:
@@ -106,6 +129,68 @@ def build_section_stub(name: str, excel_payloads: dict[str, dict[str, Any]]) -> 
     return f"/* TODO: populate {name} from merged JSON sources: {sources}. */"
 
 
+def coerce_chcm_cfg_word(value: Any) -> int | None:
+    if value is None:
+        return 0
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if value.is_integer() else None
+    return None
+
+
+def format_chcm_cfg_entry(words: list[int], comment: str) -> str:
+    return f"    {{{words[0]}U, {words[1]}U, {words[2]}U}}, /**< {comment} */"
+
+
+def build_chcm_cfg_definition(excel_payloads: dict[str, dict[str, Any]]) -> str:
+    matrix_payload = excel_payloads.get("HCM_PriLIN_Matrix")
+    if matrix_payload is None:
+        raise ValueError("缺少 HCM_PriLIN_Matrix.json，无法生成 CHCM_Cfg 定义。")
+
+    items_by_id = matrix_payload.get("items_by_id")
+    if not isinstance(items_by_id, dict):
+        raise ValueError("HCM_PriLIN_Matrix.json 缺少 items_by_id，无法生成 CHCM_Cfg 定义。")
+
+    lines = [
+        'const __attribute__ ((used,used,section(".parameter_config_48")))  CHCM_Cfg_T CHCM_Cfg[CHCM_CFG_IDX_MAX] = {'
+    ]
+
+    for item_id in range(CHCM_CFG_ITEM_COUNT):
+        item = items_by_id.get(str(item_id), {})
+        name = item.get("name") or CHCM_CFG_DEFAULT_NAME.get(item_id, f"保留{item_id}")
+        entries = item.get("entries", [])
+        words = [0, 0, 0]
+
+        if len(entries) == 1 and isinstance(entries[0], dict):
+            parsed_words: list[int] = []
+            supported = True
+            for key in ("value_1", "value_2", "value_3"):
+                word = coerce_chcm_cfg_word(entries[0].get(key))
+                if word is None:
+                    supported = False
+                    break
+                parsed_words.append(word)
+            if supported:
+                words = parsed_words
+                comment = f"Config item{item_id} {name}"
+            else:
+                comment = f"Config item{item_id} {name} (non-integer entry kept as 0U)"
+        elif len(entries) > 1:
+            comment = f"Config item{item_id} {name} (multi-entry item kept as 0U)"
+        elif item_id >= 20:
+            comment = f"Config item{item_id} 保留"
+        else:
+            comment = f"Config item{item_id} {name}"
+
+        lines.append(format_chcm_cfg_entry(words, comment))
+
+    lines.append("};                                     /* Referenced by: '<S5>/CHCM_Cfg' */")
+    return "\n".join(lines)
+
+
 def build_render_context(
     excel_payloads: dict[str, dict[str, Any]],
     kconfig_payload: dict[str, Any],
@@ -116,7 +201,10 @@ def build_render_context(
 
     for name in sorted(required_placeholders):
         if is_block_placeholder(name):
-            sections[name] = build_section_stub(name, excel_payloads)
+            if name == "CHCM_CFG_DEFINITION":
+                sections[name] = build_chcm_cfg_definition(excel_payloads)
+            else:
+                sections[name] = build_section_stub(name, excel_payloads)
             continue
         placeholders.setdefault(name, SCALAR_DEFAULTS.get(name, 0))
 
