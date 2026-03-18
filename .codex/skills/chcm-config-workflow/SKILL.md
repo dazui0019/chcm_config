@@ -23,6 +23,8 @@ Treat Excel as the primary source for Excel-backed configuration items. Treat Kc
 - Keep `templates/app_config.h.tpl` and `templates/app_config.c.tpl` close to the reference `app_config` files.
 - Replace content gradually, block by block. Avoid broad rewrites unless the user explicitly asks for them.
 - Preserve existing macro names, typedefs, declarations, comments, and layout unless the user explicitly asks to rename or restructure them.
+- In config-heavy `.c` template blocks, use `/* ... */` for standalone explanatory lines and `//` for end-of-line comments; keep one block internally consistent.
+- When touching any config block, review nearby comments for clarity, units, scaling, and visual noise; tighten stale or messy comments as part of the same change when it is low risk.
 - For `.h` macro blocks, keep each `#define` line in the template and replace only the value part.
 - For logically related `.c` and `.h` changes, treat them as one config domain and implement them through one shared entry point in `build_render_context.py`.
 - Do not use Kconfig to override Excel-backed items unless the user explicitly changes that rule.
@@ -44,6 +46,7 @@ Treat Excel as the primary source for Excel-backed configuration items. Treat Kc
 - `SYSTEM_COM_VERION` replacement in `templates/app_config.c.tpl`.
 - `CHCM_Cfg[]` value and comment replacement in `templates/app_config.c.tpl` from `output/HCM_PriLIN_Matrix.json`.
 - `CHCM_CFG_IDX_*` and `CHCM_CFG_IDX_MAX` replacement in `templates/app_config.h.tpl`.
+- `motor_config_infomation` value replacement in `templates/app_config.c.tpl` from `output/Motor_Cfg.json`, with `dc_motor_level_info` sourced from `output/HCM_PriLIN_Matrix.json` item `17`.
 - `CHCM_Cfg[]` currently uses section `.parameter_config_61`.
 
 ## Unified Entry Rule
@@ -67,13 +70,14 @@ Treat Excel as the primary source for Excel-backed configuration items. Treat Kc
 - `build_render_context.py` is the place to add new generated C blocks or value placeholders.
 - `CHCM` is currently the reference implementation for a shared `.c`/`.h` logic block handled through one unified entry in `build_render_context.py`.
 - `CHCM_Cfg[]` is currently kept expanded in `templates/app_config.c.tpl`, with item-level placeholders like `CHCM_CFG_ITEM_<id>_WORD0` and `CHCM_CFG_ITEM_<id>_COMMENT`.
+- `motor_config_infomation` is currently kept expanded in `templates/app_config.c.tpl`, with field-level `MOTOR_*` placeholders instead of one whole-block placeholder.
 - Multi-entry CHCM items `17` and `19` currently render as `{0U, 0U, 0U}` placeholders in `CHCM_Cfg[]` until the user asks for a richer encoding rule.
 - `render_app_config.py` should not parse Excel directly.
 
 ## Editing Checklist
 
 1. Change only the next requested block or placeholder set.
-2. Keep the template structure recognizable to the user.
+2. Keep the template structure recognizable to the user, and if you touch a config block also check whether nearby comments should be cleaned up.
 3. If the change logically spans both `.h` and `.c`, first create or extend one shared entry point in `build_render_context.py` for that domain.
 4. Rebuild with:
    `uv run python build_render_context.py`

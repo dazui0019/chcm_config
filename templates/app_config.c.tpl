@@ -1519,34 +1519,34 @@ const __attribute__ ((used,used,section(".parameter_config_60"))) MOTOR_CONIFICT
         @MOTOR_LOW_VOLTAGE@,
         @MOTOR_OVER_VOLTAGE@,
         @MOTOR_DIRECTION@,
-        @MOTOR_FULL_STEP_1MM@, /**< Full steps per mm, scaled by 100 */
-        @MOTOR_DISTANCE_RATIO_1MM@, /**< Wall command ratio at 10 m, scaled by 100 */
+        @MOTOR_FULL_STEP_1MM@,     // Full steps per mm, scaled by 100
+        @MOTOR_DISTANCE_RATIO_1MM@ // Wall command ratio at 10 m, scaled by 100
     },
     .motor_position_info = {
-        /**< Position order: POS1, POS2, POS3, POS4, POS5 */
-        { @MOTOR_POSITION_POS1_STEP_TO_POS@, @MOTOR_POSITION_POS2_STEP_TO_POS@, @MOTOR_POSITION_POS3_STEP_TO_POS@, @MOTOR_POSITION_POS4_STEP_TO_POS@, @MOTOR_POSITION_POS5_STEP_TO_POS@ }, /**< Steps to each position from Pos1, FS*100 */
-        { @MOTOR_POSITION_POS1_DISTANCE_TO_POS@, @MOTOR_POSITION_POS2_DISTANCE_TO_POS@, @MOTOR_POSITION_POS3_DISTANCE_TO_POS@, @MOTOR_POSITION_POS4_DISTANCE_TO_POS@, @MOTOR_POSITION_POS5_DISTANCE_TO_POS@ }, /**< Head spindle distance to Pos1, mm*100 */
-        { @MOTOR_POSITION_POS1_WALL_POS@, @MOTOR_POSITION_POS2_WALL_POS@, @MOTOR_POSITION_POS3_WALL_POS@, @MOTOR_POSITION_POS4_WALL_POS@, @MOTOR_POSITION_POS5_WALL_POS@ }, /**< Wall position at 10 m, mm */
-        { @MOTOR_POSITION_POS1_ANGLE@, @MOTOR_POSITION_POS2_ANGLE@, @MOTOR_POSITION_POS3_ANGLE@, @MOTOR_POSITION_POS4_ANGLE@, @MOTOR_POSITION_POS5_ANGLE@ }, /**< Angle to each position, degree*100 */
+        /* Position order: POS1, POS2, POS3, POS4, POS5 */
+        { @MOTOR_POSITION_POS1_STEP_TO_POS@, @MOTOR_POSITION_POS2_STEP_TO_POS@, @MOTOR_POSITION_POS3_STEP_TO_POS@, @MOTOR_POSITION_POS4_STEP_TO_POS@, @MOTOR_POSITION_POS5_STEP_TO_POS@ }, // Steps to each position from Pos1, FS*100
+        { @MOTOR_POSITION_POS1_DISTANCE_TO_POS@, @MOTOR_POSITION_POS2_DISTANCE_TO_POS@, @MOTOR_POSITION_POS3_DISTANCE_TO_POS@, @MOTOR_POSITION_POS4_DISTANCE_TO_POS@, @MOTOR_POSITION_POS5_DISTANCE_TO_POS@ }, // Head spindle distance to Pos1, mm*100
+        { @MOTOR_POSITION_POS1_WALL_POS@, @MOTOR_POSITION_POS2_WALL_POS@, @MOTOR_POSITION_POS3_WALL_POS@, @MOTOR_POSITION_POS4_WALL_POS@, @MOTOR_POSITION_POS5_WALL_POS@ }, // Wall position at 10 m, mm
+        { @MOTOR_POSITION_POS1_ANGLE@, @MOTOR_POSITION_POS2_ANGLE@, @MOTOR_POSITION_POS3_ANGLE@, @MOTOR_POSITION_POS4_ANGLE@, @MOTOR_POSITION_POS5_ANGLE@ } // Angle to each position, degree*100
     },
     .motor_operation_info = {
-        /**< running current[mA], holding current[mA], acceleration[VS/s^2], min speed[VS/s], normal speed[VS/s], max speed[VS/s] */
-        { @MOTOR_REFERENCE_RUN_RUNNING_CURRENT@, @MOTOR_REFERENCE_RUN_HOLDING_CURRENT@, @MOTOR_REFERENCE_RUN_ACCELERATION@, @MOTOR_REFERENCE_RUN_MIN_SPEED@, @MOTOR_REFERENCE_RUN_NORMAL_SPEED@, @MOTOR_REFERENCE_RUN_MAX_SPEED@ }, /**< Reference run parameters */
-        { @MOTOR_NORMAL_RUN_RUNNING_CURRENT@, @MOTOR_NORMAL_RUN_HOLDING_CURRENT@, @MOTOR_NORMAL_RUN_ACCELERATION@, @MOTOR_NORMAL_RUN_MIN_SPEED@, @MOTOR_NORMAL_RUN_NORMAL_SPEED@, @MOTOR_NORMAL_RUN_MAX_SPEED@ }, /**< Normal run parameters */
+        /* running current[mA], holding current[mA], acceleration[VS/s^2], min speed[VS/s], normal speed[VS/s], max speed[VS/s] */
+        { @MOTOR_REFERENCE_RUN_RUNNING_CURRENT@, @MOTOR_REFERENCE_RUN_HOLDING_CURRENT@, @MOTOR_REFERENCE_RUN_ACCELERATION@, @MOTOR_REFERENCE_RUN_MIN_SPEED@, @MOTOR_REFERENCE_RUN_NORMAL_SPEED@, @MOTOR_REFERENCE_RUN_MAX_SPEED@ }, // Reference run parameters
+        { @MOTOR_NORMAL_RUN_RUNNING_CURRENT@, @MOTOR_NORMAL_RUN_HOLDING_CURRENT@, @MOTOR_NORMAL_RUN_ACCELERATION@, @MOTOR_NORMAL_RUN_MIN_SPEED@, @MOTOR_NORMAL_RUN_NORMAL_SPEED@, @MOTOR_NORMAL_RUN_MAX_SPEED@ }  // Normal run parameters
     },
-    .motor_step_mode = @MOTOR_STEP_MODE@, /**< Microstep mode */
+    .motor_step_mode = @MOTOR_STEP_MODE@, // Microstep mode
     .motor_afs_info = {
         /* C mode, V mode, E mode; angle*100 */
-        { @MOTOR_AFS_LEVEL0_C_MODE@, @MOTOR_AFS_LEVEL0_V_MODE@, @MOTOR_AFS_LEVEL0_E_MODE@ }, /* LEVEL0 */
-        { @MOTOR_AFS_LEVEL1_C_MODE@, @MOTOR_AFS_LEVEL1_V_MODE@, @MOTOR_AFS_LEVEL1_E_MODE@ }, /* LEVEL1 */
-        { @MOTOR_AFS_LEVEL2_C_MODE@, @MOTOR_AFS_LEVEL2_V_MODE@, @MOTOR_AFS_LEVEL2_E_MODE@ }, /* LEVEL2 */
-        { @MOTOR_AFS_LEVEL3_C_MODE@, @MOTOR_AFS_LEVEL3_V_MODE@, @MOTOR_AFS_LEVEL3_E_MODE@ }, /* LEVEL3 */
+        { @MOTOR_AFS_LEVEL0_C_MODE@, @MOTOR_AFS_LEVEL0_V_MODE@, @MOTOR_AFS_LEVEL0_E_MODE@ }, // LEVEL0
+        { @MOTOR_AFS_LEVEL1_C_MODE@, @MOTOR_AFS_LEVEL1_V_MODE@, @MOTOR_AFS_LEVEL1_E_MODE@ }, // LEVEL1
+        { @MOTOR_AFS_LEVEL2_C_MODE@, @MOTOR_AFS_LEVEL2_V_MODE@, @MOTOR_AFS_LEVEL2_E_MODE@ }, // LEVEL2
+        { @MOTOR_AFS_LEVEL3_C_MODE@, @MOTOR_AFS_LEVEL3_V_MODE@, @MOTOR_AFS_LEVEL3_E_MODE@ }  // LEVEL3
     },
     .dc_motor_level_info = {
-        @MOTOR_DC_LEVEL0@, /**< Level0 voltage, V*100 */
-        @MOTOR_DC_LEVEL1@, /**< Level1 voltage, V*100 */
-        @MOTOR_DC_LEVEL2@, /**< Level2 voltage, V*100 */
-        @MOTOR_DC_LEVEL3@, /**< Level3 voltage, V*100 */
+        @MOTOR_DC_LEVEL0@, // Level0 voltage, V*100
+        @MOTOR_DC_LEVEL1@, // Level1 voltage, V*100
+        @MOTOR_DC_LEVEL2@, // Level2 voltage, V*100
+        @MOTOR_DC_LEVEL3@  // Level3 voltage, V*100
     },
 };
 

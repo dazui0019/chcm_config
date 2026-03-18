@@ -447,15 +447,15 @@ typedef struct
 #define CHCM_CFG_IDX_4_HSD_OUT1                ( @CHCM_CFG_IDX_4_HSD_OUT1@U )
 #define CHCM_CFG_IDX_5_HSD_OUT2                ( @CHCM_CFG_IDX_5_HSD_OUT2@U )
 #define CHCM_CFG_IDX_6_HSD_OUT3                ( @CHCM_CFG_IDX_6_HSD_OUT3@U )
-#define CHCM_CFG_IDX_7_HSD_OUT4                ( @CHCM_CFG_IDX_7_HSD_OUT4@U )/**< only used in A++ project */
-#define CHCM_CFG_IDX_8_LSD_IN1                 ( @CHCM_CFG_IDX_8_LSD_IN1@U )/**< only used in A++ project */
+#define CHCM_CFG_IDX_7_HSD_OUT4                ( @CHCM_CFG_IDX_7_HSD_OUT4@U )    /**< only used in A++ project */
+#define CHCM_CFG_IDX_8_LSD_IN1                 ( @CHCM_CFG_IDX_8_LSD_IN1@U )     /**< only used in A++ project */
 #define CHCM_CFG_IDX_9_LSD_IN2                 ( @CHCM_CFG_IDX_9_LSD_IN2@U )
 #define CHCM_CFG_IDX_10_BUCK_CV                ( @CHCM_CFG_IDX_10_BUCK_CV@U )
 #define CHCM_CFG_IDX_11_PL_DUTY                ( @CHCM_CFG_IDX_11_PL_DUTY@U )
 #define CHCM_CFG_IDX_12_DRL_NTC_DERATE         ( @CHCM_CFG_IDX_12_DRL_NTC_DERATE@U )
 #define CHCM_CFG_IDX_13_LB_NTC_DERATE          ( @CHCM_CFG_IDX_13_LB_NTC_DERATE@U )
 #define CHCM_CFG_IDX_14_HB_NTC_DERATE          ( @CHCM_CFG_IDX_14_HB_NTC_DERATE@U )
-#define CHCM_CFG_IDX_15_PL_DELAY               ( @CHCM_CFG_IDX_15_PL_DELAY@U )/**< not used */
+#define CHCM_CFG_IDX_15_PL_DELAY               ( @CHCM_CFG_IDX_15_PL_DELAY@U )   /**< not used */
 #define CHCM_CFG_IDX_16_AFS_TYPE               ( @CHCM_CFG_IDX_16_AFS_TYPE@U )
 #define CHCM_CFG_IDX_17_DC_MOTOR_LEVEL         ( @CHCM_CFG_IDX_17_DC_MOTOR_LEVEL@U )
 #define CHCM_CFG_IDX_18_STEP_MOTOR_INIT_DIR    ( @CHCM_CFG_IDX_18_STEP_MOTOR_INIT_DIR@U )
