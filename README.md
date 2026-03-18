@@ -1,6 +1,11 @@
 # chcm_config
 
-当前仓库用于把 CHCM 配置 Excel 中的 sheet 转成 JSON。
+当前仓库用于把 CHCM 配置数据拆成四个明确步骤：
+
+- `extract_excel_json.py`: 把 Excel 中的 sheet 转成 JSON
+- `kconfig_to_json.py`: 把 `Kconfig/.config` 转成 JSON
+- `build_render_context.py`: 合并 Excel JSON 和 Kconfig JSON，生成 `render_context.json`
+- `render_app_config.py`: 读取 `render_context.json`，渲染 `app_config.c/.h`
 
 目前已支持的 sheet:
 
@@ -45,10 +50,14 @@ uv sync
 
 ## 脚本运行
 
+当前推荐分成两步运行。
+
+### 第一步：Excel 转 JSON
+
 默认命令:
 
 ```powershell
-uv run python main.py
+uv run python extract_excel_json.py
 ```
 
 默认行为:
@@ -60,10 +69,10 @@ uv run python main.py
 - sheet 名匹配时会自动忽略首尾空格
 - 默认输出精简结果，只保留配置项和实际值
 
-## 参数说明
+参数说明:
 
 ```powershell
-uv run python main.py --config <config路径> --workbook <excel路径> --sheet <sheet名> --output <json路径>
+uv run python extract_excel_json.py --config <config路径> --workbook <excel路径> --sheet <sheet名> --output <json路径>
 ```
 
 - `--config`: Kconfig 生成的 `.config` 文件路径，默认是仓库根目录下的 `.config`
@@ -76,56 +85,121 @@ uv run python main.py --config <config路径> --workbook <excel路径> --sheet <
 输出默认 JSON:
 
 ```powershell
-uv run python main.py
+uv run python extract_excel_json.py
 ```
 
 使用自定义 `.config`:
 
 ```powershell
-uv run python main.py --config configs\\project_a.config
+uv run python extract_excel_json.py --config configs\\project_a.config
 ```
 
 指定输出路径:
 
 ```powershell
-uv run python main.py --sheet HCM_PriLIN_Matrix --output output\\hcm_prilin_matrix.json
+uv run python extract_excel_json.py --sheet HCM_PriLIN_Matrix --output output\\hcm_prilin_matrix.json
 ```
 
 批量转换到自定义目录:
 
 ```powershell
-uv run python main.py --output output\\all_sheets
+uv run python extract_excel_json.py --output output\\all_sheets
 ```
 
 转换 `CH_Cfg`:
 
 ```powershell
-uv run python main.py --sheet CH_Cfg
+uv run python extract_excel_json.py --sheet CH_Cfg
 ```
 
 转换 `Animation_Cfg`:
 
 ```powershell
-uv run python main.py --sheet Animation_Cfg
+uv run python extract_excel_json.py --sheet Animation_Cfg
 ```
 
 转换 `current_config`:
 
 ```powershell
-uv run python main.py --sheet current_config
+uv run python extract_excel_json.py --sheet current_config
 ```
 
 转换 `Motor_Cfg`:
 
 ```powershell
-uv run python main.py --sheet Motor_Cfg
+uv run python extract_excel_json.py --sheet Motor_Cfg
 ```
 
 转换 `TI_sequential`:
 
 ```powershell
-uv run python main.py --sheet TI_sequential
+uv run python extract_excel_json.py --sheet TI_sequential
 ```
+
+### 第二步：Kconfig 转 JSON
+
+默认命令:
+
+```powershell
+uv run python kconfig_to_json.py
+```
+
+参数说明:
+
+```powershell
+uv run python kconfig_to_json.py --kconfig <Kconfig路径> --config <.config路径> --output <json路径>
+```
+
+- `--kconfig`: `Kconfig` 文件路径，默认 `Kconfig`
+- `--config`: `.config` 路径，默认仓库根目录下的 `.config`
+- `--output`: 输出 JSON 路径，默认 `output/Kconfig.json`
+
+### 第三步：生成 render_context.json
+
+默认命令:
+
+```powershell
+uv run python build_render_context.py
+```
+
+参数说明:
+
+```powershell
+uv run python build_render_context.py --input-dir <excel_json目录> --kconfig-json <kconfig.json> --output <render_context.json>
+```
+
+- `--input-dir`: Excel JSON 所在目录，默认 `output`
+- `--kconfig-json`: Kconfig JSON 路径，默认 `output/Kconfig.json`
+- `--output`: 输出 render context 路径，默认 `output/render_context.json`
+
+当前 `build_render_context.py` 会优先填充模板中能直接推导出来的标量占位符。
+对于还没有完成业务映射的大段 C 代码块，占位符会先落成 `TODO` 注释 stub，方便后续逐步替换成真实生成逻辑。
+
+### 第四步：JSON 渲染 app_config
+
+`render_app_config.py` 不直接解析 Excel，也不直接理解 Kconfig。
+它只负责读取“已经合并好的 render context JSON”，然后渲染 [templates/app_config.h.tpl](templates/app_config.h.tpl) 和 [templates/app_config.c.tpl](templates/app_config.c.tpl)。
+
+默认命令:
+
+```powershell
+uv run python render_app_config.py --context output\\render_context.json
+```
+
+参数说明:
+
+```powershell
+uv run python render_app_config.py --context <context.json> --header-template <h模板> --source-template <c模板> --header-output <输出h> --source-output <输出c>
+```
+
+- `--context`: 合并后的 render context JSON 路径，必填
+- `--header-template`: `.h` 模板路径，默认 `templates/app_config.h.tpl`
+- `--source-template`: `.c` 模板路径，默认 `templates/app_config.c.tpl`
+- `--header-output`: 输出头文件路径，默认 `output/app_config.h`
+- `--source-output`: 输出源文件路径，默认 `output/app_config.c`
+
+`build_render_context.py` 生成的 `render_context.json` 会同时保留原始 `excel` / `kconfig` 数据，以及模板渲染用的 `placeholders` / `sections`。
+render context JSON 推荐结构可参考 [templates/README.md](templates/README.md)。
 
 ## 当前输出格式
 
