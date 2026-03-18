@@ -56,6 +56,35 @@ CHCM_CFG_DEFAULT_NAME = {
     18: "步进电机初始化运动配置",
     19: "步进电机堵转点到对应档位运动步数",
 }
+CHCM_CFG_INDEX_MACROS = [
+    ("CHCM_CFG_IDX_0_INACTIVE", 0, ""),
+    ("CHCM_CFG_IDX_1_SIGNAL_LED_CURRENT", 1, ""),
+    ("CHCM_CFG_IDX_2_LSD_OUT1", 2, ""),
+    ("CHCM_CFG_IDX_3_LSD_OUT2", 3, ""),
+    ("CHCM_CFG_IDX_4_HSD_OUT1", 4, ""),
+    ("CHCM_CFG_IDX_5_HSD_OUT2", 5, ""),
+    ("CHCM_CFG_IDX_6_HSD_OUT3", 6, ""),
+    ("CHCM_CFG_IDX_7_HSD_OUT4", 7, "/**< only used in A++ project */"),
+    ("CHCM_CFG_IDX_8_LSD_IN1", 8, "/**< only used in A++ project */"),
+    ("CHCM_CFG_IDX_9_LSD_IN2", 9, ""),
+    ("CHCM_CFG_IDX_10_BUCK_CV", 10, ""),
+    ("CHCM_CFG_IDX_11_PL_DUTY", 11, ""),
+    ("CHCM_CFG_IDX_12_DRL_NTC_DERATE", 12, ""),
+    ("CHCM_CFG_IDX_13_LB_NTC_DERATE", 13, ""),
+    ("CHCM_CFG_IDX_14_HB_NTC_DERATE", 14, ""),
+    ("CHCM_CFG_IDX_15_PL_DELAY", 15, "/**< not used */"),
+    ("CHCM_CFG_IDX_16_AFS_TYPE", 16, ""),
+    ("CHCM_CFG_IDX_17_DC_MOTOR_LEVEL", 17, ""),
+    ("CHCM_CFG_IDX_18_STEP_MOTOR_INIT_DIR", 18, ""),
+    ("CHCM_CFG_IDX_19_STEP_MOTOR_BLOCK_STEPS", 19, ""),
+    ("CHCM_CFG_IDX_20_RESERVED_20", 20, ""),
+    ("CHCM_CFG_IDX_21_RESERVED_21", 21, ""),
+    ("CHCM_CFG_IDX_22_RESERVED_22", 22, ""),
+    ("CHCM_CFG_IDX_23_RESERVED_23", 23, ""),
+    ("CHCM_CFG_IDX_24_RESERVED_24", 24, ""),
+    ("CHCM_CFG_IDX_25_RESERVED_25", 25, ""),
+    ("CHCM_CFG_IDX_26_RESERVED_26", 26, ""),
+]
 
 
 def load_json(path: Path) -> Any:
@@ -145,6 +174,32 @@ def format_chcm_cfg_entry(words: list[int], comment: str) -> str:
     return f"    {{{words[0]}U, {words[1]}U, {words[2]}U}}, /**< {comment} */"
 
 
+def format_chcm_cfg_index_define(name: str, value: int, suffix: str = "") -> str:
+    line = f"#define {name:<39} ( {value:2d}U )"
+    return f"{line}{suffix}"
+
+
+def build_chcm_cfg_index_definitions(excel_payloads: dict[str, dict[str, Any]]) -> str:
+    matrix_payload = excel_payloads.get("HCM_PriLIN_Matrix")
+    if matrix_payload is None:
+        raise ValueError("缺少 HCM_PriLIN_Matrix.json，无法生成 CHCM_CFG 索引定义。")
+
+    items = matrix_payload.get("items", [])
+    item_ids = {
+        item.get("id"): item.get("id")
+        for item in items
+        if isinstance(item, dict) and isinstance(item.get("id"), int)
+    }
+
+    lines = [
+        format_chcm_cfg_index_define(name, item_ids.get(default_value, default_value), suffix)
+        for name, default_value, suffix in CHCM_CFG_INDEX_MACROS
+    ]
+    max_index = max((value for _, value, _ in CHCM_CFG_INDEX_MACROS), default=-1) + 1
+    lines.append(format_chcm_cfg_index_define("CHCM_CFG_IDX_MAX", max_index))
+    return "\n".join(lines)
+
+
 def build_chcm_cfg_definition(excel_payloads: dict[str, dict[str, Any]]) -> str:
     matrix_payload = excel_payloads.get("HCM_PriLIN_Matrix")
     if matrix_payload is None:
@@ -155,7 +210,7 @@ def build_chcm_cfg_definition(excel_payloads: dict[str, dict[str, Any]]) -> str:
         raise ValueError("HCM_PriLIN_Matrix.json 缺少 items_by_id，无法生成 CHCM_Cfg 定义。")
 
     lines = [
-        'const __attribute__ ((used,used,section(".parameter_config_48")))  CHCM_Cfg_T CHCM_Cfg[CHCM_CFG_IDX_MAX] = {'
+        'const __attribute__ ((used,used,section(".parameter_config_61")))  CHCM_Cfg_T CHCM_Cfg[CHCM_CFG_IDX_MAX] = {'
     ]
 
     for item_id in range(CHCM_CFG_ITEM_COUNT):
@@ -203,6 +258,8 @@ def build_render_context(
         if is_block_placeholder(name):
             if name == "CHCM_CFG_DEFINITION":
                 sections[name] = build_chcm_cfg_definition(excel_payloads)
+            elif name == "CHCM_CFG_INDEX_DEFINITIONS":
+                sections[name] = build_chcm_cfg_index_definitions(excel_payloads)
             else:
                 sections[name] = build_section_stub(name, excel_payloads)
             continue

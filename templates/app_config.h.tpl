@@ -440,34 +440,7 @@ typedef struct
     uint16_t config_word2;
 }CHCM_Cfg_T;
 
-#define CHCM_CFG_IDX_0_INACTIVE                (  0U )
-#define CHCM_CFG_IDX_1_SIGNAL_LED_CURRENT      (  1U )
-#define CHCM_CFG_IDX_2_LSD_OUT1                (  2U )
-#define CHCM_CFG_IDX_3_LSD_OUT2                (  3U )
-#define CHCM_CFG_IDX_4_HSD_OUT1                (  4U )
-#define CHCM_CFG_IDX_5_HSD_OUT2                (  5U )
-#define CHCM_CFG_IDX_6_HSD_OUT3                (  6U )
-#define CHCM_CFG_IDX_7_HSD_OUT4                (  7U )/**< only used in A++ project */
-#define CHCM_CFG_IDX_8_LSD_IN1                 (  8U )/**< only used in A++ project */
-#define CHCM_CFG_IDX_9_LSD_IN2                 (  9U )
-#define CHCM_CFG_IDX_10_BUCK_CV                ( 10U )
-#define CHCM_CFG_IDX_11_PL_DUTY                ( 11U )
-#define CHCM_CFG_IDX_12_DRL_NTC_DERATE         ( 12U )
-#define CHCM_CFG_IDX_13_LB_NTC_DERATE          ( 13U )
-#define CHCM_CFG_IDX_14_HB_NTC_DERATE          ( 14U )
-#define CHCM_CFG_IDX_15_PL_DELAY               ( 15U )/**< not used */
-#define CHCM_CFG_IDX_16_AFS_TYPE               ( 16U )
-#define CHCM_CFG_IDX_17_DC_MOTOR_LEVEL         ( 17U )
-#define CHCM_CFG_IDX_18_STEP_MOTOR_INIT_DIR    ( 18U )
-#define CHCM_CFG_IDX_19_STEP_MOTOR_BLOCK_STEPS ( 19U )
-#define CHCM_CFG_IDX_20_RESERVED_20            ( 20U ) 
-#define CHCM_CFG_IDX_21_RESERVED_21            ( 21U )
-#define CHCM_CFG_IDX_22_RESERVED_22            ( 22U )
-#define CHCM_CFG_IDX_23_RESERVED_23            ( 23U )
-#define CHCM_CFG_IDX_24_RESERVED_24            ( 24U )
-#define CHCM_CFG_IDX_25_RESERVED_25            ( 25U )
-#define CHCM_CFG_IDX_26_RESERVED_26            ( 26U )
-#define CHCM_CFG_IDX_MAX                       ( 27U )
+@CHCM_CFG_INDEX_DEFINITIONS@
 
 #if EEA_X == VERSION_V5
    #define LOUDNESS_55HZ_IDX   ( 0U )
