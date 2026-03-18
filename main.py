@@ -1298,13 +1298,9 @@ def find_supported_sheets(workbook) -> list[Worksheet]:
     return supported_sheets
 
 
-def count_output_items(output_payload: dict[str, Any], parsed: dict[str, Any]) -> int:
+def count_output_items(output_payload: dict[str, Any]) -> int:
     if "items" in output_payload:
         return len(output_payload["items"])
-    if "ics" in output_payload:
-        return len(output_payload["ics"])
-    if "animations" in output_payload:
-        return sum(len(animation.get("frames", [])) for animation in output_payload["animations"])
     if "unlock_animations" in output_payload or "lock_animations" in output_payload:
         return sum(
             len(animation.get("frames", []))
@@ -1321,40 +1317,10 @@ def count_output_items(output_payload: dict[str, Any], parsed: dict[str, Any]) -
             + (1 if motor_config.get("microstep_mode") is not None else 0)
             + len(motor_config.get("afs_positions", {}))
         )
-    if parsed.get("parser") == "ch_cfg" and "channels" in output_payload:
-        return len(output_payload["channels"])
-    if parsed.get("parser") == "current_config" and "channels" in output_payload:
+    if "channels" in output_payload:
         return len(output_payload["channels"])
     if "animation" in output_payload:
         return len(output_payload["animation"].get("frames", []))
-    if "positions" in output_payload and "control" in output_payload and "afs_levels" in output_payload:
-        return (
-            len(output_payload.get("safety_voltage_configuration", {}))
-            + len(output_payload.get("general", {}))
-            + len(output_payload.get("positions", []))
-            + sum(len(parameters) for parameters in output_payload.get("control", {}).values())
-            + (1 if output_payload.get("step_mode") is not None else 0)
-            + len(output_payload.get("afs_levels", []))
-        )
-    if "items" in parsed:
-        return len(parsed["items"])
-    if "ics" in parsed:
-        return len(parsed["ics"])
-    if "animations" in parsed:
-        return sum(len(animation.get("frames", [])) for animation in parsed["animations"])
-    if "animation" in parsed:
-        return len(parsed["animation"].get("frames", []))
-    if parsed.get("parser") == "current_config":
-        return len(parsed.get("channels", []))
-    if "positions" in parsed and "control_modes" in parsed and "afs_levels" in parsed:
-        return (
-            len(parsed.get("safety_voltage_configuration", []))
-            + len(parsed.get("general", []))
-            + len(parsed.get("positions", []))
-            + sum(len(mode.get("parameters", [])) for mode in parsed.get("control_modes", []))
-            + (1 if parsed.get("step_mode") else 0)
-            + len(parsed.get("afs_levels", []))
-        )
     return 0
 
 
@@ -1383,12 +1349,6 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Output JSON path for a single sheet, or output directory when converting multiple sheets. Default: output/<sheet_name>.json",
     )
-    parser.add_argument(
-        "--mode",
-        choices=("values", "full"),
-        default="values",
-        help="Output only config items and values, or the full parsed structure.",
-    )
     return parser
 
 
@@ -1402,15 +1362,14 @@ def main() -> None:
         batch_mode = args.sheet is None
 
         print(f"Workbook: {workbook_path}")
-        print(f"Mode: {args.mode}")
         for worksheet in worksheets:
             value_worksheet = find_sheet(value_workbook, worksheet.title)
             parsed = parse_sheet(worksheet, value_worksheet)
-            output_payload = condense_sheet(parsed) if args.mode == "values" else parsed
+            output_payload = condense_sheet(parsed)
             output_path = resolve_output_path(args.output, parsed["sheet_name"], multi_sheet=batch_mode)
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(json.dumps(output_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-            item_count = count_output_items(output_payload, parsed)
+            item_count = count_output_items(output_payload)
 
             print(f"Wrote {output_path}")
             print(f"Sheet: {parsed['sheet_name_raw']!r}")

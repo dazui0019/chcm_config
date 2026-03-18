@@ -63,15 +63,13 @@ uv run python main.py
 ## 参数说明
 
 ```powershell
-uv run python main.py --config <config路径> --workbook <excel路径> --sheet <sheet名> --output <json路径> --mode <values|full>
+uv run python main.py --config <config路径> --workbook <excel路径> --sheet <sheet名> --output <json路径>
 ```
 
 - `--config`: Kconfig 生成的 `.config` 文件路径，默认是仓库根目录下的 `.config`
 - `--workbook`: Excel 文件路径。传入后会覆盖 `.config` 中的路径配置
 - `--sheet`: sheet 名称。不传时会转换工作簿中所有当前已支持的 sheet
 - `--output`: 指定单个 sheet 时为 JSON 文件路径；未指定 `--sheet` 且批量转换时为输出目录
-- `--mode values`: 精简模式。只输出配置项和值
-- `--mode full`: 完整模式。输出解析后的完整中间结构，便于调试
 
 ## 常用示例
 
@@ -90,7 +88,7 @@ uv run python main.py --config configs\\project_a.config
 指定输出路径:
 
 ```powershell
-uv run python main.py --sheet HCM_PriLIN_Matrix --output output\\hcm_prilin_matrix_values.json
+uv run python main.py --sheet HCM_PriLIN_Matrix --output output\\hcm_prilin_matrix.json
 ```
 
 批量转换到自定义目录:
@@ -129,17 +127,11 @@ uv run python main.py --sheet Motor_Cfg
 uv run python main.py --sheet TI_sequential
 ```
 
-查看完整解析结果:
-
-```powershell
-uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm_prilin_matrix_full.json
-```
-
 ## 当前输出格式
 
-所有 `values` 模式输出的顶层都会包含 `schema_version`，便于程序侧做格式兼容。
+所有输出结果的顶层都会包含 `schema_version`，便于程序侧做格式兼容。
 
-`HCM_PriLIN_Matrix` 在 `values` 模式下，每个配置项都会输出为:
+`HCM_PriLIN_Matrix` 每个配置项都会输出为:
 
 ```json
 {
@@ -186,7 +178,7 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 }
 ```
 
-`CH_Cfg` 在 `values` 模式下会输出扁平化后的通道配置映射:
+`CH_Cfg` 会输出扁平化后的通道配置映射:
 
 ```json
 {
@@ -210,7 +202,7 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 - `channels` 使用扁平对象而不是 `ics` 数组，程序可以直接按通道 ID 索引
 - 配置类型说明仍然保留在 `config_type_descriptions`
 
-`Animation_Cfg` 在 `values` 模式下会按动画模式分组输出每一帧的 PWM 通道值:
+`Animation_Cfg` 会按动画模式分组输出每一帧的 PWM 通道值:
 
 ```json
 {
@@ -261,9 +253,7 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 - 第 2 行 `K factory` 会被忽略，不会输出到 JSON
 - 会自动忽略右侧不属于 `ICx-CHyy` 的备注列
 - 如果后续出现既不是 `unlock` 也不是 `lock` 的模式，会额外输出到 `other_animations`
-- `full` 模式下会额外保留 `animation_kind`、`source_row`、通道表头和分组行范围，便于调试
-
-`current_config` 在 `values` 模式下会按通道输出当前电流配置:
+`current_config` 会按通道输出当前电流配置:
 
 ```json
 {
@@ -305,9 +295,7 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 - 主要数据会放在 `channels` 下，并以 `ICx-CHyy` 作为 key，方便程序直接按通道索引
 - 每个通道会按需要输出 `k_factory`、`max_current_per_channel`、`primary_function`、`fixed_current`、`secondary_function`
 - 公式列会优先输出 Excel 缓存的计算结果，而不是原始公式字符串
-- `full` 模式下会额外保留 `source_row`、表头名和公式字段，便于调试
-
-`Motor_Cfg` 在 `values` 模式下会拆成几个配置区块输出:
+`Motor_Cfg` 会拆成几个配置区块输出:
 
 ```json
 {
@@ -356,9 +344,7 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 - `control_modes` 会按 `reference_run`、`normal_run` 这样的模式 key 分组
 - `positions` 中的公式列会优先输出 Excel 缓存的计算结果，而不是原始公式字符串
 - `microstep_mode` 目前保留 Excel 原值，例如 `1/8[FS]`
-- `full` 模式下会额外保留 `source_row`、表头名，以及位置公式字段，便于调试
-
-`TI_sequential` 在 `values` 模式下会输出单个动画的逐帧 PWM 通道值:
+`TI_sequential` 会输出单个动画的逐帧 PWM 通道值:
 
 ```json
 {
@@ -395,8 +381,6 @@ uv run python main.py --sheet HCM_PriLIN_Matrix --mode full --output output\\hcm
 - `TI_sequential` 会按单个动画输出到 `animation`
 - 每一行都会被当作一帧，保留 `time_ms` 和该帧实际有值的通道 PWM
 - 通道值为 `0` 时不会写入 `channels`
-- `full` 模式下会额外保留 `source_row`、通道表头和动画行范围，便于调试
-
 ## 注意事项
 
 - 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg`、`Animation_Cfg`、`current_config`、`Motor_Cfg` 和 `TI_sequential` 的解析；默认会把工作簿中存在的这六个已支持 sheet 都转换出来
