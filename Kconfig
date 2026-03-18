@@ -1,7 +1,40 @@
 mainmenu "CHCM Config Converter"
 
 config CHCM_WORKBOOK_PATH
-    string "Excel workbook path"
-    default "xlsx/E01 CHCM-1C-2C1V(得邦)_config_Dataset_LEFT_V0.2.xlsx"
-    help
-      Path to the Excel workbook used by the converter script.
+  string
+  prompt "Excel workbook path"
+  default "xlsx/E01 CHCM-1C-2C1V(得邦)_config_Dataset_LEFT_V0.2.xlsx"
+  help
+    Path to the Excel workbook used by the converter script.
+
+choice
+  prompt  "Project Name"
+  default PROJECT_A_SMALL
+
+  config  PROJECT_A_SMALL
+    bool "A+SMALL"
+  config PROJECT_A_PLUS_PLUS
+    bool "A++"
+  config PROJECT_A_PLUS
+    bool "A+"
+endchoice
+config PROJECT_NAME
+    int
+    default 0 if PROJECT_A_SMALL
+    default 1 if PROJECT_A_PLUS_PLUS
+    default 2 if PROJECT_A_PLUS
+
+choice
+  prompt "COM_VERION"
+  default COM_VERSION_V5
+
+  config COM_VERSION_V4
+    bool "V4.0"
+
+  config COM_VERSION_V5
+    bool "V5.0"
+endchoice
+config SYSTEM_COM_VERION
+  int
+  default 0 if COM_VERSION_V4
+  default 1 if COM_VERSION_V5
