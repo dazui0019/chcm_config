@@ -87,6 +87,30 @@ CHCM_CFG_FIXED_INDEX_VALUES = {
     "CHCM_CFG_IDX_25_RESERVED_25": 25,
     "CHCM_CFG_IDX_26_RESERVED_26": 26,
 }
+MOTOR_CFG_DIRECTION_MACRO_MAP = {
+    "push": "MOTOR_PUSH",
+    "pull": "MOTOR_PULL",
+}
+MOTOR_CFG_STEP_MODE_MACRO_MAP = {
+    "1/8[fs]": "MOTOR_STEP_MODE_1_8_STEP",
+    "1/16[fs]": "MOTOR_STEP_MODE_1_16_STEP",
+    "1/32[fs]": "MOTOR_STEP_MODE_1_32_STEP",
+}
+MOTOR_POSITION_KEYS = ("pos1", "pos2", "pos3", "pos4", "pos5")
+MOTOR_AFS_LEVEL_KEYS = ("level0", "level1", "level2", "level3")
+MOTOR_RUN_MODE_KEY_MAP = (
+    ("reference_run", "Reference run"),
+    ("normal_run", "Normal Operation"),
+)
+MOTOR_RUN_FIELD_KEYS = (
+    "running_current",
+    "holding_current",
+    "max_acceleration_ramp",
+    "min_speed",
+    "normal_speed",
+    "max_speed",
+)
+MOTOR_DC_LEVEL_CFG_ID = 17
 
 
 def load_json(path: Path) -> Any:
@@ -158,6 +182,25 @@ def extract_scalar_placeholders(kconfig_payload: dict[str, Any], excel_payloads:
 def build_section_stub(name: str, excel_payloads: dict[str, dict[str, Any]]) -> str:
     sources = ", ".join(sorted(excel_payloads)) or "Kconfig"
     return f"/* TODO: populate {name} from merged JSON sources: {sources}. */"
+
+
+def require_dict(parent: dict[str, Any], key: str, context: str) -> dict[str, Any]:
+    value = parent.get(key)
+    if not isinstance(value, dict):
+        raise ValueError(f"{context} 缺少对象字段 {key!r}。")
+    return value
+
+
+def require_excel_payload(
+    excel_payloads: dict[str, dict[str, Any]],
+    sheet_name: str,
+    *,
+    purpose: str,
+) -> dict[str, Any]:
+    payload = excel_payloads.get(sheet_name)
+    if not isinstance(payload, dict):
+        raise ValueError(f"缺少 {sheet_name}.json，无法{purpose}。")
+    return payload
 
 
 def coerce_chcm_cfg_word(value: Any) -> int | None:
@@ -277,6 +320,205 @@ def build_chcm_cfg_placeholders(
     return placeholders
 
 
+def round_half_away_from_zero(value: float) -> int:
+    if value >= 0:
+        return math.floor(value + 0.5)
+    return math.ceil(value - 0.5)
+
+
+def scale_motor_numeric(value: Any, scale: int, field_name: str) -> int:
+    if value is None or isinstance(value, bool):
+        raise ValueError(f"Motor_Cfg 字段 {field_name} 缺少有效数值。")
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+    elif isinstance(value, str):
+        try:
+            numeric = float(value.strip())
+        except ValueError as exc:
+            raise ValueError(f"Motor_Cfg 字段 {field_name} 不是数值: {value!r}") from exc
+    else:
+        raise ValueError(f"Motor_Cfg 字段 {field_name} 的值类型不支持: {type(value).__name__}")
+    return round_half_away_from_zero(numeric * scale)
+
+
+def resolve_motor_direction_macro(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ValueError("Motor_Cfg.general_settings.positive_command_action 必须是字符串。")
+    normalized = value.strip().lower()
+    if normalized not in MOTOR_CFG_DIRECTION_MACRO_MAP:
+        raise ValueError(f"不支持的电机方向配置: {value!r}")
+    return MOTOR_CFG_DIRECTION_MACRO_MAP[normalized]
+
+
+def resolve_motor_step_mode_macro(value: Any) -> str:
+    if not isinstance(value, str):
+        raise ValueError("Motor_Cfg.microstep_mode 必须是字符串。")
+    normalized = value.strip().lower()
+    if normalized not in MOTOR_CFG_STEP_MODE_MACRO_MAP:
+        raise ValueError(f"不支持的步进模式: {value!r}")
+    return MOTOR_CFG_STEP_MODE_MACRO_MAP[normalized]
+
+
+def load_motor_config_sources(excel_payloads: dict[str, dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
+    motor_payload = require_excel_payload(excel_payloads, "Motor_Cfg", purpose="生成 Motor 配置占位符")
+    motor_config = motor_payload.get("motor_config")
+    if not isinstance(motor_config, dict):
+        raise ValueError("Motor_Cfg.json 缺少 motor_config，无法生成 Motor 配置占位符。")
+
+    _, items_by_id = load_chcm_cfg_sources(excel_payloads)
+    return motor_config, items_by_id
+
+
+def build_motor_position_row(positions: dict[str, Any], field_name: str, scale: int) -> list[int]:
+    values: list[int] = []
+    for position_key in MOTOR_POSITION_KEYS:
+        position = positions.get(position_key)
+        if not isinstance(position, dict):
+            raise ValueError(f"Motor_Cfg.positions 缺少位置 {position_key!r}。")
+        values.append(scale_motor_numeric(position.get(field_name), scale, f"positions.{position_key}.{field_name}"))
+    return values
+
+
+def build_motor_afs_rows(afs_positions: dict[str, Any]) -> list[list[int]]:
+    rows: list[list[int]] = []
+    for level_key in MOTOR_AFS_LEVEL_KEYS:
+        level = afs_positions.get(level_key)
+        if not isinstance(level, dict):
+            raise ValueError(f"Motor_Cfg.afs_positions 缺少档位 {level_key!r}。")
+        rows.append(
+            [
+                scale_motor_numeric(level.get("c_mode"), 100, f"afs_positions.{level_key}.c_mode"),
+                scale_motor_numeric(level.get("v_mode"), 100, f"afs_positions.{level_key}.v_mode"),
+                scale_motor_numeric(level.get("e_mode"), 100, f"afs_positions.{level_key}.e_mode"),
+            ]
+        )
+    return rows
+
+
+def build_motor_run_rows(control_modes: dict[str, Any]) -> list[tuple[str, list[int]]]:
+    rows: list[tuple[str, list[int]]] = []
+    for mode_key, comment in MOTOR_RUN_MODE_KEY_MAP:
+        mode = control_modes.get(mode_key)
+        if not isinstance(mode, dict):
+            raise ValueError(f"Motor_Cfg.control_modes 缺少模式 {mode_key!r}。")
+        rows.append(
+            (
+                comment,
+                [
+                    scale_motor_numeric(mode.get(field_name), 1, f"control_modes.{mode_key}.{field_name}")
+                    for field_name in MOTOR_RUN_FIELD_KEYS
+                ],
+            )
+        )
+    return rows
+
+
+def build_motor_dc_level_values(items_by_id: dict[str, Any]) -> list[int]:
+    item = items_by_id.get(str(MOTOR_DC_LEVEL_CFG_ID))
+    if not isinstance(item, dict):
+        raise ValueError("HCM_PriLIN_Matrix.json 缺少 CFG 项 17，无法生成 dc_motor_level_info。")
+
+    entries = item.get("entries")
+    if not isinstance(entries, list):
+        raise ValueError("CFG 项 17 缺少 entries，无法生成 dc_motor_level_info。")
+
+    levels_by_index: dict[int, int] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError("CFG 项 17 存在无效 entry，无法生成 dc_motor_level_info。")
+        raw_index = entry.get("value_1")
+        if isinstance(raw_index, bool) or not isinstance(raw_index, int):
+            raise ValueError("CFG 项 17 的 value_1 必须是整数档位索引。")
+        levels_by_index[raw_index] = scale_motor_numeric(entry.get("value_2"), 100, f"CHCM[17].value_2[{raw_index}]")
+
+    expected_indexes = range(4)
+    missing_indexes = [index for index in expected_indexes if index not in levels_by_index]
+    if missing_indexes:
+        raise ValueError(f"CFG 项 17 缺少档位 {missing_indexes}，无法生成 dc_motor_level_info。")
+    return [levels_by_index[index] for index in expected_indexes]
+
+
+def build_motor_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+) -> dict[str, Any]:
+    motor_placeholder_required = any(name.startswith("MOTOR_") for name in required_placeholders)
+    if not motor_placeholder_required:
+        return {}
+
+    motor_config, items_by_id = load_motor_config_sources(excel_payloads)
+
+    safety_voltage = require_dict(motor_config, "safety_voltage", "Motor_Cfg.motor_config")
+    general_settings = require_dict(motor_config, "general_settings", "Motor_Cfg.motor_config")
+    control_modes = require_dict(motor_config, "control_modes", "Motor_Cfg.motor_config")
+    positions = require_dict(motor_config, "positions", "Motor_Cfg.motor_config")
+    afs_positions = require_dict(motor_config, "afs_positions", "Motor_Cfg.motor_config")
+
+    motor_low_voltage = scale_motor_numeric(safety_voltage.get("low_voltage_v"), 10, "safety_voltage.low_voltage_v")
+    motor_over_voltage = scale_motor_numeric(safety_voltage.get("over_voltage_v"), 10, "safety_voltage.over_voltage_v")
+    motor_direction = resolve_motor_direction_macro(general_settings.get("positive_command_action"))
+    motor_full_step_per_mm = scale_motor_numeric(general_settings.get("full_steps_per_mm"), 100, "general_settings.full_steps_per_mm")
+    motor_wall_ratio = scale_motor_numeric(
+        general_settings.get("wall_command_ratio_per_mm_at_10m"),
+        100,
+        "general_settings.wall_command_ratio_per_mm_at_10m",
+    )
+
+    position_steps = build_motor_position_row(positions, "steps_to_pos1_fs", 100)
+    position_distances = build_motor_position_row(positions, "spindle_distance_to_pos1_mm", 100)
+    position_wall_values = build_motor_position_row(positions, "wall_position_mm", 1)
+    position_angles = build_motor_position_row(positions, "angle_deg", 100)
+    motor_run_rows = build_motor_run_rows(control_modes)
+    motor_step_mode = resolve_motor_step_mode_macro(motor_config.get("microstep_mode"))
+    motor_afs_rows = build_motor_afs_rows(afs_positions)
+    dc_motor_level_values = build_motor_dc_level_values(items_by_id)
+    run_rows_by_mode = {
+        mode_key: values
+        for (mode_key, _comment), (_comment2, values) in zip(MOTOR_RUN_MODE_KEY_MAP, motor_run_rows, strict=True)
+    }
+
+    placeholders: dict[str, Any] = {
+        "MOTOR_LOW_VOLTAGE": motor_low_voltage,
+        "MOTOR_OVER_VOLTAGE": motor_over_voltage,
+        "MOTOR_DIRECTION": motor_direction,
+        "MOTOR_FULL_STEP_1MM": motor_full_step_per_mm,
+        "MOTOR_DISTANCE_RATIO_1MM": motor_wall_ratio,
+        "MOTOR_STEP_MODE": motor_step_mode,
+    }
+
+    for index, value in enumerate(position_steps, start=1):
+        placeholders[f"MOTOR_POSITION_POS{index}_STEP_TO_POS"] = value
+    for index, value in enumerate(position_distances, start=1):
+        placeholders[f"MOTOR_POSITION_POS{index}_DISTANCE_TO_POS"] = value
+    for index, value in enumerate(position_wall_values, start=1):
+        placeholders[f"MOTOR_POSITION_POS{index}_WALL_POS"] = value
+    for index, value in enumerate(position_angles, start=1):
+        placeholders[f"MOTOR_POSITION_POS{index}_ANGLE"] = value
+
+    for mode_key, values in run_rows_by_mode.items():
+        mode_prefix = "MOTOR_REFERENCE_RUN" if mode_key == "reference_run" else "MOTOR_NORMAL_RUN"
+        for field_name, value in zip(MOTOR_RUN_FIELD_KEYS, values, strict=True):
+            field_suffix = {
+                "running_current": "RUNNING_CURRENT",
+                "holding_current": "HOLDING_CURRENT",
+                "max_acceleration_ramp": "ACCELERATION",
+                "min_speed": "MIN_SPEED",
+                "normal_speed": "NORMAL_SPEED",
+                "max_speed": "MAX_SPEED",
+            }[field_name]
+            placeholders[f"{mode_prefix}_{field_suffix}"] = value
+
+    for level_index, values in enumerate(motor_afs_rows):
+        placeholders[f"MOTOR_AFS_LEVEL{level_index}_C_MODE"] = values[0]
+        placeholders[f"MOTOR_AFS_LEVEL{level_index}_V_MODE"] = values[1]
+        placeholders[f"MOTOR_AFS_LEVEL{level_index}_E_MODE"] = values[2]
+
+    for level_index, value in enumerate(dc_motor_level_values):
+        placeholders[f"MOTOR_DC_LEVEL{level_index}"] = value
+
+    return placeholders
+
+
 def build_render_context(
     excel_payloads: dict[str, dict[str, Any]],
     kconfig_payload: dict[str, Any],
@@ -285,10 +527,11 @@ def build_render_context(
     placeholders = {**SCALAR_DEFAULTS, **extract_scalar_placeholders(kconfig_payload, excel_payloads)}
     sections: dict[str, str] = {}
     placeholders.update(build_chcm_cfg_placeholders(excel_payloads, required_placeholders))
+    placeholders.update(build_motor_placeholders(excel_payloads, required_placeholders))
 
     for name in sorted(required_placeholders):
         if is_block_placeholder(name):
-            sections[name] = build_section_stub(name, excel_payloads)
+            sections.setdefault(name, build_section_stub(name, excel_payloads))
             continue
         placeholders.setdefault(name, SCALAR_DEFAULTS.get(name, 0))
 

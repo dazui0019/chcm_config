@@ -1355,7 +1355,7 @@ const __attribute__ ((used,used,section(".parameter_config_58")))  uint8_t u8_ti
 
 /* Const memory section */
 /* Definition for custom storage class: Const */
-const __attribute__ ((used,used,section(".parameter_config_59")))  uint8_t u8_drl_ntc_default_derate = 100U;/* Referenced by: '<S4>/Constant2' */
+const __attribute__ ((used,used,section(".parameter_config_59")))  uint8_t u8_drl_ntc_default_derate = 100U;
 
 #if 1
 const __attribute__ ((used,used,section(".parameter_config_61")))  CHCM_Cfg_T CHCM_Cfg[CHCM_CFG_IDX_MAX] = {
@@ -1386,7 +1386,7 @@ const __attribute__ ((used,used,section(".parameter_config_61")))  CHCM_Cfg_T CH
     {@CHCM_CFG_ITEM_24_WORD0@U, @CHCM_CFG_ITEM_24_WORD1@U, @CHCM_CFG_ITEM_24_WORD2@U}, /**< @CHCM_CFG_ITEM_24_COMMENT@ */
     {@CHCM_CFG_ITEM_25_WORD0@U, @CHCM_CFG_ITEM_25_WORD1@U, @CHCM_CFG_ITEM_25_WORD2@U}, /**< @CHCM_CFG_ITEM_25_COMMENT@ */
     {@CHCM_CFG_ITEM_26_WORD0@U, @CHCM_CFG_ITEM_26_WORD1@U, @CHCM_CFG_ITEM_26_WORD2@U}, /**< @CHCM_CFG_ITEM_26_COMMENT@ */
-};                                     /* Referenced by: '<S5>/CHCM_Cfg' */
+};
 
 #if ( USED_MATRIX_FUNCTION == 1U )
 const __attribute__ ((used,used,section(".parameter_config_49"))) uint8_t g_used_matrix_ic_nums = USED_MATRIX_CHIP_NUMS;
@@ -1513,46 +1513,40 @@ const __attribute__ ((used,used,section(".parameter_config_53"))) uint8_t g_used
 
 const __attribute__ ((used,used,section(".parameter_config_62"))) uint8_t u8_lb_hb_welcom_en = 0;
 
-/**
- * ************************************************************************************
- *                            Motor Configuration Table                               *
- *                                                                                    *
- * ************************************************************************************ 
- * */
+/** Motor configuration table */
 const __attribute__ ((used,used,section(".parameter_config_60"))) MOTOR_CONIFICTION_TABLE_T motor_config_infomation = {
     .motor_properties = {
-        90,
-        160,
-        MOTOR_PULL,
-        3000, /**< FS/mm */
-        9100, /**< mm */
+        @MOTOR_LOW_VOLTAGE@,
+        @MOTOR_OVER_VOLTAGE@,
+        @MOTOR_DIRECTION@,
+        @MOTOR_FULL_STEP_1MM@, /**< Full steps per mm, scaled by 100 */
+        @MOTOR_DISTANCE_RATIO_1MM@, /**< Wall command ratio at 10 m, scaled by 100 */
     },
     .motor_position_info = {
-    /**< POS1,   POS2,   POS3,   POS4,   POS5*/
-        {   0,   7858,  12387,  36648,  37397},/**< step to position */
-        {   0,    262,    412,   1222,    1247},/**< distance to position */
-        {-762,   -524,      0,    349,    372},
-        {-436,   -300,      0,    200,    213},/**< dgress to position */
+        /**< Position order: POS1, POS2, POS3, POS4, POS5 */
+        { @MOTOR_POSITION_POS1_STEP_TO_POS@, @MOTOR_POSITION_POS2_STEP_TO_POS@, @MOTOR_POSITION_POS3_STEP_TO_POS@, @MOTOR_POSITION_POS4_STEP_TO_POS@, @MOTOR_POSITION_POS5_STEP_TO_POS@ }, /**< Steps to each position from Pos1, FS*100 */
+        { @MOTOR_POSITION_POS1_DISTANCE_TO_POS@, @MOTOR_POSITION_POS2_DISTANCE_TO_POS@, @MOTOR_POSITION_POS3_DISTANCE_TO_POS@, @MOTOR_POSITION_POS4_DISTANCE_TO_POS@, @MOTOR_POSITION_POS5_DISTANCE_TO_POS@ }, /**< Head spindle distance to Pos1, mm*100 */
+        { @MOTOR_POSITION_POS1_WALL_POS@, @MOTOR_POSITION_POS2_WALL_POS@, @MOTOR_POSITION_POS3_WALL_POS@, @MOTOR_POSITION_POS4_WALL_POS@, @MOTOR_POSITION_POS5_WALL_POS@ }, /**< Wall position at 10 m, mm */
+        { @MOTOR_POSITION_POS1_ANGLE@, @MOTOR_POSITION_POS2_ANGLE@, @MOTOR_POSITION_POS3_ANGLE@, @MOTOR_POSITION_POS4_ANGLE@, @MOTOR_POSITION_POS5_ANGLE@ }, /**< Angle to each position, degree*100 */
     },
     .motor_operation_info = {
-        
-/**<refernce run current,  hold current,  acc, min start speed, normal start speed, max move speed */
-            {   560,          110,        8848,    125,                 125,             350 }, /**< Reference run */
-            {   560,          110,        8848,    125,                 350,             350 }, /**< Normal Operation */
+        /**< running current[mA], holding current[mA], acceleration[VS/s^2], min speed[VS/s], normal speed[VS/s], max speed[VS/s] */
+        { @MOTOR_REFERENCE_RUN_RUNNING_CURRENT@, @MOTOR_REFERENCE_RUN_HOLDING_CURRENT@, @MOTOR_REFERENCE_RUN_ACCELERATION@, @MOTOR_REFERENCE_RUN_MIN_SPEED@, @MOTOR_REFERENCE_RUN_NORMAL_SPEED@, @MOTOR_REFERENCE_RUN_MAX_SPEED@ }, /**< Reference run parameters */
+        { @MOTOR_NORMAL_RUN_RUNNING_CURRENT@, @MOTOR_NORMAL_RUN_HOLDING_CURRENT@, @MOTOR_NORMAL_RUN_ACCELERATION@, @MOTOR_NORMAL_RUN_MIN_SPEED@, @MOTOR_NORMAL_RUN_NORMAL_SPEED@, @MOTOR_NORMAL_RUN_MAX_SPEED@ }, /**< Normal run parameters */
     },
-    .motor_step_mode = MOTOR_STEP_MODE_1_8_STEP,
+    .motor_step_mode = @MOTOR_STEP_MODE@, /**< Microstep mode */
     .motor_afs_info = {
-            /*C mode,  V mode,  E mode*/
-            { 0,       0,       0},/*LEVEL0*/
-            { -57,     -157,    200},/*LEVEL1*/
-            { -100,    -257,    100},/*LEVEL2*/
-            { -200,    -300,    57},/*LEVEL3*/
+        /* C mode, V mode, E mode; angle*100 */
+        { @MOTOR_AFS_LEVEL0_C_MODE@, @MOTOR_AFS_LEVEL0_V_MODE@, @MOTOR_AFS_LEVEL0_E_MODE@ }, /* LEVEL0 */
+        { @MOTOR_AFS_LEVEL1_C_MODE@, @MOTOR_AFS_LEVEL1_V_MODE@, @MOTOR_AFS_LEVEL1_E_MODE@ }, /* LEVEL1 */
+        { @MOTOR_AFS_LEVEL2_C_MODE@, @MOTOR_AFS_LEVEL2_V_MODE@, @MOTOR_AFS_LEVEL2_E_MODE@ }, /* LEVEL2 */
+        { @MOTOR_AFS_LEVEL3_C_MODE@, @MOTOR_AFS_LEVEL3_V_MODE@, @MOTOR_AFS_LEVEL3_E_MODE@ }, /* LEVEL3 */
     },
     .dc_motor_level_info = {
-        5780,
-        4970,
-        4290,
-        3060,
+        @MOTOR_DC_LEVEL0@, /**< Level0 voltage, V*100 */
+        @MOTOR_DC_LEVEL1@, /**< Level1 voltage, V*100 */
+        @MOTOR_DC_LEVEL2@, /**< Level2 voltage, V*100 */
+        @MOTOR_DC_LEVEL3@, /**< Level3 voltage, V*100 */
     },
 };
 
