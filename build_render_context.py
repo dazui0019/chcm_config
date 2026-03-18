@@ -176,10 +176,10 @@ def format_chcm_cfg_index_value(value: int) -> str:
     return f"{value:2d}"
 
 
-def build_chcm_cfg_index_placeholders(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, str]:
+def load_chcm_cfg_sources(excel_payloads: dict[str, dict[str, Any]]) -> tuple[dict[str, int], dict[str, Any]]:
     matrix_payload = excel_payloads.get("HCM_PriLIN_Matrix")
     if matrix_payload is None:
-        raise ValueError("缺少 HCM_PriLIN_Matrix.json，无法生成 CHCM_CFG 索引占位符。")
+        raise ValueError("缺少 HCM_PriLIN_Matrix.json，无法生成 CHCM_CFG 占位符。")
 
     items = matrix_payload.get("items", [])
     name_to_id = {
@@ -189,7 +189,13 @@ def build_chcm_cfg_index_placeholders(excel_payloads: dict[str, dict[str, Any]])
         and isinstance(item.get("name"), str)
         and isinstance(item.get("id"), int)
     }
+    items_by_id = matrix_payload.get("items_by_id")
+    if not isinstance(items_by_id, dict):
+        raise ValueError("HCM_PriLIN_Matrix.json 缺少 items_by_id，无法生成 CHCM_CFG 占位符。")
+    return name_to_id, items_by_id
 
+
+def build_chcm_cfg_index_placeholders(name_to_id: dict[str, int]) -> dict[str, str]:
     placeholders: dict[str, str] = {}
     resolved_values: list[int] = []
 
@@ -206,18 +212,6 @@ def build_chcm_cfg_index_placeholders(excel_payloads: dict[str, dict[str, Any]])
 
     placeholders["CHCM_CFG_IDX_MAX"] = format_chcm_cfg_index_value(max(resolved_values, default=-1) + 1)
     return placeholders
-
-
-def load_chcm_cfg_items_by_id(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    matrix_payload = excel_payloads.get("HCM_PriLIN_Matrix")
-    if matrix_payload is None:
-        raise ValueError("缺少 HCM_PriLIN_Matrix.json，无法生成 CHCM_Cfg 占位符。")
-
-    items_by_id = matrix_payload.get("items_by_id")
-    if not isinstance(items_by_id, dict):
-        raise ValueError("HCM_PriLIN_Matrix.json 缺少 items_by_id，无法生成 CHCM_Cfg 占位符。")
-    return items_by_id
-
 
 def resolve_chcm_cfg_entry(item_id: int, items_by_id: dict[str, Any]) -> tuple[list[int], str]:
     item = items_by_id.get(str(item_id), {})
@@ -249,8 +243,7 @@ def resolve_chcm_cfg_entry(item_id: int, items_by_id: dict[str, Any]) -> tuple[l
     return words, comment
 
 
-def build_chcm_cfg_item_placeholders(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, str]:
-    items_by_id = load_chcm_cfg_items_by_id(excel_payloads)
+def build_chcm_cfg_item_placeholders(items_by_id: dict[str, Any]) -> dict[str, str]:
     placeholders: dict[str, str] = {}
 
     for item_id in range(CHCM_CFG_ITEM_COUNT):
@@ -263,6 +256,27 @@ def build_chcm_cfg_item_placeholders(excel_payloads: dict[str, dict[str, Any]]) 
     return placeholders
 
 
+def build_chcm_cfg_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+) -> dict[str, str]:
+    needs_index_placeholders = any(
+        name == "CHCM_CFG_IDX_MAX" or name.startswith("CHCM_CFG_IDX_")
+        for name in required_placeholders
+    )
+    needs_item_placeholders = any(name.startswith("CHCM_CFG_ITEM_") for name in required_placeholders)
+    if not needs_index_placeholders and not needs_item_placeholders:
+        return {}
+
+    name_to_id, items_by_id = load_chcm_cfg_sources(excel_payloads)
+    placeholders: dict[str, str] = {}
+    if needs_index_placeholders:
+        placeholders.update(build_chcm_cfg_index_placeholders(name_to_id))
+    if needs_item_placeholders:
+        placeholders.update(build_chcm_cfg_item_placeholders(items_by_id))
+    return placeholders
+
+
 def build_render_context(
     excel_payloads: dict[str, dict[str, Any]],
     kconfig_payload: dict[str, Any],
@@ -270,10 +284,7 @@ def build_render_context(
 ) -> dict[str, Any]:
     placeholders = {**SCALAR_DEFAULTS, **extract_scalar_placeholders(kconfig_payload, excel_payloads)}
     sections: dict[str, str] = {}
-    if any(name == "CHCM_CFG_IDX_MAX" or name.startswith("CHCM_CFG_IDX_") for name in required_placeholders):
-        placeholders.update(build_chcm_cfg_index_placeholders(excel_payloads))
-    if any(name.startswith("CHCM_CFG_ITEM_") for name in required_placeholders):
-        placeholders.update(build_chcm_cfg_item_placeholders(excel_payloads))
+    placeholders.update(build_chcm_cfg_placeholders(excel_payloads, required_placeholders))
 
     for name in sorted(required_placeholders):
         if is_block_placeholder(name):
