@@ -1,0 +1,4 @@
+interface:
+  display_name: "CHCM Config Workflow"
+  short_description: "Maintain Excel/Kconfig app_config generation"
+  default_prompt: "Use $chcm-config-workflow to continue modifying the Excel/Kconfig to app_config generation workflow in this repository."
