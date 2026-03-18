@@ -41,7 +41,7 @@ Treat Excel as the primary source for Excel-backed configuration items. Treat Kc
 
 - `PROJECT_NAME` replacement in `templates/app_config.h.tpl`.
 - `SYSTEM_COM_VERION` replacement in `templates/app_config.c.tpl`.
-- `CHCM_Cfg[]` generation in `templates/app_config.c.tpl` from `output/HCM_PriLIN_Matrix.json`.
+- `CHCM_Cfg[]` value and comment replacement in `templates/app_config.c.tpl` from `output/HCM_PriLIN_Matrix.json`.
 - `CHCM_CFG_IDX_*` and `CHCM_CFG_IDX_MAX` replacement in `templates/app_config.h.tpl`.
 - `CHCM_Cfg[]` currently uses section `.parameter_config_61`.
 
@@ -57,6 +57,7 @@ Treat Excel as the primary source for Excel-backed configuration items. Treat Kc
 ## Current Known Behavior
 
 - `build_render_context.py` is the place to add new generated C blocks or value placeholders.
+- `CHCM_Cfg[]` is currently kept expanded in `templates/app_config.c.tpl`, with item-level placeholders like `CHCM_CFG_ITEM_<id>_WORD0` and `CHCM_CFG_ITEM_<id>_COMMENT`.
 - Multi-entry CHCM items `17` and `19` currently render as `{0U, 0U, 0U}` placeholders in `CHCM_Cfg[]` until the user asks for a richer encoding rule.
 - `render_app_config.py` should not parse Excel directly.
 

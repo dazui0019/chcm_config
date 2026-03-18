@@ -240,7 +240,8 @@ render context JSON 推荐结构可参考 [templates/README.md](templates/README
 ## TODO
 
 - 评估是否把 `CHCM_CFG_IDX_MAX` 改为 Kconfig 可配置项，用它动态控制 `CHCM` 尾部 `RESERVED` 数量。
-- 如果启用这个方案，需要同时调整 `build_render_context.py`、`templates/app_config.h.tpl` 和 `CHCM_Cfg[]` 生成逻辑，不能只修改 `CHCM_CFG_IDX_MAX` 一个值。
+- 如果启用这个方案，需要同时调整 `build_render_context.py`、`templates/app_config.h.tpl` 和 `templates/app_config.c.tpl`，不能只修改 `CHCM_CFG_IDX_MAX` 一个值。
+- 这个动态逻辑会同时影响 `.h` 里的 `RESERVED` 宏数量，以及 `.c` 里的 `CHCM_Cfg[]` 数组长度和尾部 `reserved` 项数量。
 - 预期方向是以 Excel 实际 CFG 数量作为前半段固定项，再由 `CHCM_CFG_IDX_MAX` 推导尾部 `RESERVED` 数量；当配置值小于 Excel 实际项数量时，脚本应直接报错。
 
 ## 当前输出格式

@@ -172,10 +172,6 @@ def coerce_chcm_cfg_word(value: Any) -> int | None:
     return None
 
 
-def format_chcm_cfg_entry(words: list[int], comment: str) -> str:
-    return f"    {{{words[0]}U, {words[1]}U, {words[2]}U}}, /**< {comment} */"
-
-
 def format_chcm_cfg_index_value(value: int) -> str:
     return f"{value:2d}"
 
@@ -212,50 +208,59 @@ def build_chcm_cfg_index_placeholders(excel_payloads: dict[str, dict[str, Any]])
     return placeholders
 
 
-def build_chcm_cfg_definition(excel_payloads: dict[str, dict[str, Any]]) -> str:
+def load_chcm_cfg_items_by_id(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, Any]:
     matrix_payload = excel_payloads.get("HCM_PriLIN_Matrix")
     if matrix_payload is None:
-        raise ValueError("缺少 HCM_PriLIN_Matrix.json，无法生成 CHCM_Cfg 定义。")
+        raise ValueError("缺少 HCM_PriLIN_Matrix.json，无法生成 CHCM_Cfg 占位符。")
 
     items_by_id = matrix_payload.get("items_by_id")
     if not isinstance(items_by_id, dict):
-        raise ValueError("HCM_PriLIN_Matrix.json 缺少 items_by_id，无法生成 CHCM_Cfg 定义。")
+        raise ValueError("HCM_PriLIN_Matrix.json 缺少 items_by_id，无法生成 CHCM_Cfg 占位符。")
+    return items_by_id
 
-    lines = [
-        'const __attribute__ ((used,used,section(".parameter_config_61")))  CHCM_Cfg_T CHCM_Cfg[CHCM_CFG_IDX_MAX] = {'
-    ]
+
+def resolve_chcm_cfg_entry(item_id: int, items_by_id: dict[str, Any]) -> tuple[list[int], str]:
+    item = items_by_id.get(str(item_id), {})
+    name = item.get("name") or CHCM_CFG_DEFAULT_NAME.get(item_id, f"保留{item_id}")
+    entries = item.get("entries", [])
+    words = [0, 0, 0]
+
+    if len(entries) == 1 and isinstance(entries[0], dict):
+        parsed_words: list[int] = []
+        supported = True
+        for key in ("value_1", "value_2", "value_3"):
+            word = coerce_chcm_cfg_word(entries[0].get(key))
+            if word is None:
+                supported = False
+                break
+            parsed_words.append(word)
+        if supported:
+            words = parsed_words
+            comment = f"Config item{item_id} {name}"
+        else:
+            comment = f"Config item{item_id} {name} (non-integer entry kept as 0U)"
+    elif len(entries) > 1:
+        comment = f"Config item{item_id} {name} (multi-entry item kept as 0U)"
+    elif item_id >= 20:
+        comment = f"Config item{item_id} 保留"
+    else:
+        comment = f"Config item{item_id} {name}"
+
+    return words, comment
+
+
+def build_chcm_cfg_item_placeholders(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, str]:
+    items_by_id = load_chcm_cfg_items_by_id(excel_payloads)
+    placeholders: dict[str, str] = {}
 
     for item_id in range(CHCM_CFG_ITEM_COUNT):
-        item = items_by_id.get(str(item_id), {})
-        name = item.get("name") or CHCM_CFG_DEFAULT_NAME.get(item_id, f"保留{item_id}")
-        entries = item.get("entries", [])
-        words = [0, 0, 0]
+        words, comment = resolve_chcm_cfg_entry(item_id, items_by_id)
+        placeholders[f"CHCM_CFG_ITEM_{item_id}_WORD0"] = str(words[0])
+        placeholders[f"CHCM_CFG_ITEM_{item_id}_WORD1"] = str(words[1])
+        placeholders[f"CHCM_CFG_ITEM_{item_id}_WORD2"] = str(words[2])
+        placeholders[f"CHCM_CFG_ITEM_{item_id}_COMMENT"] = comment
 
-        if len(entries) == 1 and isinstance(entries[0], dict):
-            parsed_words: list[int] = []
-            supported = True
-            for key in ("value_1", "value_2", "value_3"):
-                word = coerce_chcm_cfg_word(entries[0].get(key))
-                if word is None:
-                    supported = False
-                    break
-                parsed_words.append(word)
-            if supported:
-                words = parsed_words
-                comment = f"Config item{item_id} {name}"
-            else:
-                comment = f"Config item{item_id} {name} (non-integer entry kept as 0U)"
-        elif len(entries) > 1:
-            comment = f"Config item{item_id} {name} (multi-entry item kept as 0U)"
-        elif item_id >= 20:
-            comment = f"Config item{item_id} 保留"
-        else:
-            comment = f"Config item{item_id} {name}"
-
-        lines.append(format_chcm_cfg_entry(words, comment))
-
-    lines.append("};                                     /* Referenced by: '<S5>/CHCM_Cfg' */")
-    return "\n".join(lines)
+    return placeholders
 
 
 def build_render_context(
@@ -267,13 +272,12 @@ def build_render_context(
     sections: dict[str, str] = {}
     if any(name == "CHCM_CFG_IDX_MAX" or name.startswith("CHCM_CFG_IDX_") for name in required_placeholders):
         placeholders.update(build_chcm_cfg_index_placeholders(excel_payloads))
+    if any(name.startswith("CHCM_CFG_ITEM_") for name in required_placeholders):
+        placeholders.update(build_chcm_cfg_item_placeholders(excel_payloads))
 
     for name in sorted(required_placeholders):
         if is_block_placeholder(name):
-            if name == "CHCM_CFG_DEFINITION":
-                sections[name] = build_chcm_cfg_definition(excel_payloads)
-            else:
-                sections[name] = build_section_stub(name, excel_payloads)
+            sections[name] = build_section_stub(name, excel_payloads)
             continue
         placeholders.setdefault(name, SCALAR_DEFAULTS.get(name, 0))
 
