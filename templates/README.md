@@ -30,7 +30,8 @@
   "system_com_verion": "VERSION_V5",
   "used_matrix_chip_nums": 3,
   "used_matrix_led_nums": 32,
-  "used_cvcc_chip_nums": 11,
+  "used_cvcc_chip_nums": 12,
+  "used_cvcc_channel_nums": 24,
   "sections": {
     "base_parameter_config_definitions": "...",
     "lock_unlock_macros": "...",
@@ -61,6 +62,7 @@
   - `@USED_MATRIX_CHIP_NUMS@`
   - `@USED_MATRIX_LED_NUMS@`
   - `@USED_CVCC_CHIP_NUMS@`
+  - `@USED_CVCC_CHANNEL_NUMS@`
   - `@CVCC_OUTPUT_VOLTAGE_LEVELS@`
   - `@SIGNAL_LED_CURRENT_METHOD@`
   - `@TI_DRL_CURRENT_DERATE_METHOD@`
@@ -86,6 +88,7 @@
 - `@TI_SWEEP_LED_K_MODE_1_DEFINITION@`
 - `@TI_SWEEP_LED_K_MODE_2_DEFINITION@`
 - `@LOCK_UNLOCK_ANIMATION_DEFINITIONS@`
+- `@CVCC_K_ARRAY_ROWS@`
 - `@CVCC_AND_CHANNEL_MAP_DEFINITIONS@`
 - `@CHCM_CFG_DEFINITION@`
 - `@MATRIX_DEFINITIONS@`
@@ -98,3 +101,4 @@
 - 先把 Kconfig 补充项转成和 Excel 解析结果一样“稳定、无副作用”的 JSON。
 - 再写一个合并步骤，把 Excel JSON 和 Kconfig JSON 收敛成 render context。
 - 最后再做模板渲染，不要在渲染阶段再做业务判断。
+- 当前 `u8_cvcc_k_array` 的第一维优先使用 `USED_CVCC_CHIP_NUMS`，第二维使用 `USED_CVCC_CHANNEL_NUMS`，数组内容由 `@CVCC_K_ARRAY_ROWS@` 填充。

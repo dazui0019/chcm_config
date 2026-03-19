@@ -12,7 +12,7 @@
 
 - `HCM_PriLIN_Matrix`
 - `CH_Cfg`
-- `Animation_Cfg`
+- `Lock ModeN` / `Unlock ModeN`
 - `current_config`
 - `Motor_Cfg`
 - `TI_sequential`
@@ -148,10 +148,16 @@ uv run python extract_excel_json.py --output output\\all_sheets
 uv run python extract_excel_json.py --sheet CH_Cfg
 ```
 
-转换 `Animation_Cfg`:
+转换 `Lock Mode1`:
 
 ```powershell
-uv run python extract_excel_json.py --sheet Animation_Cfg
+uv run python extract_excel_json.py --sheet "Lock Mode1"
+```
+
+转换 `Unlock Mode1`:
+
+```powershell
+uv run python extract_excel_json.py --sheet "Unlock Mode1"
 ```
 
 转换 `current_config`:
@@ -318,46 +324,36 @@ render context JSON 推荐结构可参考 [templates/README.md](templates/README
 说明:
 
 - 顶层 `ics` 以 `ICx` 为 key 分组，每组内部再用 `CHyy` 保存该 IC 的通道配置
-- 通道名仍统一成 `CHyy` 格式，便于和 `Animation_Cfg`、`TI_sequential`、`current_config` 做映射
+- 通道名仍统一成 `CHyy` 格式，便于和 `Lock/Unlock ModeN`、`TI_sequential`、`current_config` 做映射
 - 配置类型说明仍然保留在 `config_type_descriptions`
 
-`Animation_Cfg` 会按动画模式分组输出每一帧的 PWM 通道值:
+原始解闭锁动画 sheet（例如 `Lock Mode1`、`Unlock Mode1`）会按帧输出左侧表格数据:
 
 ```json
 {
   "schema_version": 2,
-  "sheet_name": "Animation_Cfg",
-  "total_ic_count": 12,
-  "channel_count_per_ic": 24,
-  "animation_count": 2,
-  "unlock_animation_count": 1,
-  "lock_animation_count": 1,
-  "unlock_animations": [
+  "sheet_name": "Lock Mode1",
+  "table_side": "left",
+  "led_side": "right",
+  "column_count": 54,
+  "frame_count": 301,
+  "columns": [
     {
-      "mode_name": "unlock Mode 1",
-      "channel_type": "PWM",
-      "frames": [
-        {
-          "time_ms": 0,
-          "channels": {
-            "IC6-CH11": 100
-          }
-        },
-        {
-          "time_ms": 10,
-          "channels": {
-            "IC6-CH10": 100,
-            "IC6-CH11": 100
-          }
-        }
-      ]
+      "column_id": 0,
+      "section_name": "DRL/POS/ADS_R",
+      "mapping_name": "IC500(1010)",
+      "output_name": "OUT4\nDRL_POS_16",
+      "led_name": "LED630、LED631"
     }
   ],
-  "lock_animations": [
+  "frames": [
     {
-      "mode_name": "lock Mode 1",
-      "channel_type": "PWM",
-      "frames": []
+      "time_ms": 0,
+      "values": [0, 0, 0, 100]
+    },
+    {
+      "time_ms": 10,
+      "values": [0, 0, 0, 100]
     }
   ]
 }
@@ -365,13 +361,12 @@ render context JSON 推荐结构可参考 [templates/README.md](templates/README
 
 说明:
 
-- 顶层会额外输出总 IC 数 `total_ic_count` 和每个 IC 的通道数 `channel_count_per_ic`
-- 顶层会额外输出 `unlock_animation_count` 和 `lock_animation_count`
-- 动画会明确拆分到 `unlock_animations` 和 `lock_animations`，便于后续同类模式继续扩展
-- 后续每一行都会被当作一帧，保留 `time_ms` 和该帧实际有值的通道 PWM
-- 第 2 行 `K factory` 会被忽略，不会输出到 JSON
-- 会自动忽略右侧不属于 `ICx-CHyy` 的备注列
-- 如果后续出现既不是 `unlock` 也不是 `lock` 的模式，会额外输出到 `other_animations`
+- sheet 名需要匹配 `Lock ModeN` / `Unlock ModeN`，其中 `N` 为模式号
+- 当前只提取表格左侧动画区；这部分数据代表右侧 LED 动画
+- 左右区域之间的空列会自动跳过，不会出现在 `columns` 中
+- `columns` 保留列顺序和原始映射信息，`frames[*].values` 与 `columns` 一一对应
+- `frame_count` 会在后续渲染阶段直接作为该模式的总步数来源
+- `lock` / `unlock` 的模式数量也直接由存在的原始 sheet 数量决定，不再依赖 `Animation_Cfg`
 `current_config` 会按通道输出当前电流配置:
 
 ```json
@@ -414,6 +409,9 @@ render context JSON 推荐结构可参考 [templates/README.md](templates/README
 - 主要数据会放在 `channels` 下，并以 `ICx-CHyy` 作为 key，方便程序直接按通道索引
 - 每个通道会按需要输出 `k_factory`、`max_current_per_channel`、`primary_function`、`fixed_current`、`secondary_function`
 - 公式列会优先输出 Excel 缓存的计算结果，而不是原始公式字符串
+- 当前渲染 `u8_cvcc_k_array` 时，会读取 `primary_function.dimming_coefficient`
+- 如果某个通道没有功能 1 或没有调光系数，则该表项会按 `100` 回填
+- 当前模板中 `u8_cvcc_k_array` 的声明使用 `USED_CVCC_CHIP_NUMS` 和 `USED_CVCC_CHANNEL_NUMS` 两个宏；当前物理维度固定为 `12x24`
 `Motor_Cfg` 会拆成几个配置区块输出:
 
 ```json
@@ -502,5 +500,5 @@ render context JSON 推荐结构可参考 [templates/README.md](templates/README
 - 通道值为 `0` 时不会写入 `channels`
 ## 注意事项
 
-- 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg`、`Animation_Cfg`、`current_config`、`Motor_Cfg` 和 `TI_sequential` 的解析；默认会把工作簿中存在的这六个已支持 sheet 都转换出来
+- 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg`、`current_config`、`Motor_Cfg`、`TI_sequential`，以及所有匹配 `Lock ModeN` / `Unlock ModeN` 的原始动画 sheet；默认会把工作簿中存在的这些已支持 sheet 都转换出来
 - `xlsx/` 和 `output/` 默认被 `.gitignore` 忽略，不会自动提交到 Git
