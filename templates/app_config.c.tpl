@@ -5,11 +5,7 @@
 const __attribute__ ((used,used,section(".parameter_config_0"))) uint8_t g_communication_version = @SYSTEM_COM_VERION@;
 const __attribute__ ((used,used,section(".parameter_config_1"))) uint8_t g_used_cvcc_ic_nums = USED_CVCC_CHIP_NUMS;
 const __attribute__ ((used,used,section(".parameter_config_2"))) APP_Cvcc_Cfg_T App_cvcc_cfg_L[USED_CVCC_CHIP_NUMS] = {
-    /** Cvcc IC addr,     Cvcc IC type,      used_uartchn,     Used switch,   switch_mask  max_current */
-    /* IC addr comes from CH_Cfg IC ID. If Used switch is 0, addr renders as 255U. */
-    /* Used switch comes from the number of channels with data under the same IC in CH_Cfg. */
-    /* switch_mask comes from CH_Cfg too: bit0 -> switch0, bit1 -> switch1, ... */
-    /* max_current comes from current_config.max_current_per_channel and is shared by each IC. */
+    /** ic_addr,          ic_type,           ic_uartchn,       ic_io_sw_nums, ic_sw_mask,   ic_max_current */
     {  @CVCC_CFG_IC0_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC0_USED_SWITCH@U,   @CVCC_CFG_IC0_SWITCH_MASK@U,  @CVCC_CFG_IC0_MAX_CURRENT@ },
     {  @CVCC_CFG_IC1_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC1_USED_SWITCH@U,   @CVCC_CFG_IC1_SWITCH_MASK@U,  @CVCC_CFG_IC1_MAX_CURRENT@ },
     {  @CVCC_CFG_IC2_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC2_USED_SWITCH@U,   @CVCC_CFG_IC2_SWITCH_MASK@U,  @CVCC_CFG_IC2_MAX_CURRENT@ },
