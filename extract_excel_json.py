@@ -46,7 +46,6 @@ FLOAT_TEXT_PATTERN = re.compile(r"^[+-]?(?:\d+\.\d+|\d+\.\d*|\.\d+)$")
 SUPPORTED_SHEET_NAMES = (
     "HCM_PriLIN_Matrix",
     "CH_Cfg",
-    "Animation_Cfg",
     "current_config",
     "Motor_Cfg",
     "TI_sequential",
@@ -1382,8 +1381,6 @@ def parse_sheet(worksheet: Worksheet, value_worksheet: Worksheet | None = None) 
         return parse_hcm_prilin_matrix(worksheet)
     if sheet_name == "CH_Cfg":
         return parse_ch_cfg(worksheet)
-    if sheet_name == "Animation_Cfg":
-        return parse_animation_cfg(worksheet)
     if parse_raw_signal_animation_sheet_name(sheet_name) is not None:
         return parse_e01_ads_animation(worksheet)
     if sheet_name == "current_config":
@@ -1401,8 +1398,6 @@ def condense_sheet(parsed: dict[str, Any]) -> dict[str, Any]:
         return condense_hcm_prilin_matrix(parsed)
     if parser_name == "ch_cfg":
         return condense_ch_cfg(parsed)
-    if parser_name == "animation_cfg":
-        return condense_animation_cfg(parsed)
     if parser_name == "e01_ads_animation":
         return condense_e01_ads_animation(parsed)
     if parser_name == "current_config":

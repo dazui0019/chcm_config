@@ -59,7 +59,6 @@ CVCC_CFG_IC_ADDR_INDEXES = tuple(range(12))
 CVCC_CFG_UNUSED_IC_ADDR = 255
 ANIMATION_CFG_KIND_NAMES = ("lock", "unlock")
 ANIMATION_CFG_MAX_MODE_COUNT = 5
-ANIMATION_CFG_MODE_NAME_PATTERN = re.compile(r"\bmode\s*(\d+)\b", re.IGNORECASE)
 RAW_SIGNAL_ANIMATION_SHEET_PATTERN = re.compile(r"^(lock|unlock)\s+mode\s*(\d+)$", re.IGNORECASE)
 CVCC_IC_TYPE_SYMBOL_TO_MACRO = {
     "CVCC_IC_TYPE_TPS929120": "CVCC_TPS929120",
@@ -150,44 +149,6 @@ MOTOR_RUN_FIELD_KEYS = (
     "max_speed",
 )
 MOTOR_DC_LEVEL_CFG_ID = 17
-
-
-def build_signal_animation_channel_layout() -> tuple[tuple[str, str], ...]:
-    layout: list[tuple[str, str]] = []
-
-    layout.extend(
-        (f"IC10-CH{channel:02d}", f"DRL_POS_{label}")
-        for channel, label in zip(range(4, -1, -1), range(16, 11, -1))
-    )
-    layout.extend(
-        (f"IC1-CH{channel:02d}", f"DRL_POS_{label}")
-        for channel, label in zip(range(5, -1, -1), range(11, 5, -1))
-    )
-    layout.extend(
-        (f"IC0-CH{channel:02d}", f"DRL_POS_{label}")
-        for channel, label in zip(range(4, -1, -1), range(5, 0, -1))
-    )
-
-    label = 20
-    for ic_index in range(6, 1, -1):
-        for channel in range(11, 7, -1):
-            layout.append((f"IC{ic_index}-CH{channel:02d}", f"DRL_POS_{label}"))
-            label -= 1
-
-    label = 1
-    for ic_index in (7, 8):
-        for channel in range(9):
-            layout.append((f"IC{ic_index}-CH{channel:02d}", f"GRILL_POS_{label}"))
-            label += 1
-
-    return tuple(layout)
-
-
-SIGNAL_ANIMATION_CHANNEL_LAYOUT = build_signal_animation_channel_layout()
-SIGNAL_ANIMATION_CHANNEL_INDEX = {
-    channel_name: index for index, (channel_name, _label) in enumerate(SIGNAL_ANIMATION_CHANNEL_LAYOUT)
-}
-SIGNAL_ANIMATION_HEADER = " ".join(label for _channel_name, label in SIGNAL_ANIMATION_CHANNEL_LAYOUT)
 
 
 def load_json(path: Path) -> Any:
@@ -508,14 +469,6 @@ def build_cvcc_output_voltage_placeholders(
     return placeholders
 
 
-def load_animation_cfg_source(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    payload = require_excel_payload(excel_payloads, "Animation_Cfg", purpose="生成动画模式步数占位符")
-    other_animations = payload.get("other_animations", [])
-    if other_animations:
-        raise ValueError("Animation_Cfg 存在非 lock/unlock 动画模式，当前模板暂不支持。")
-    return payload
-
-
 def parse_raw_signal_animation_sheet_name(sheet_name: str) -> tuple[str, int] | None:
     match = RAW_SIGNAL_ANIMATION_SHEET_PATTERN.fullmatch(sheet_name.strip())
     if match is None:
@@ -523,58 +476,75 @@ def parse_raw_signal_animation_sheet_name(sheet_name: str) -> tuple[str, int] | 
     return match.group(1).lower(), int(match.group(2))
 
 
-def parse_animation_cfg_mode_index(mode_name: Any) -> int:
-    if not isinstance(mode_name, str):
-        raise ValueError("Animation_Cfg.mode_name 必须是字符串。")
+def validate_raw_signal_animation_payload(
+    sheet_name: str,
+    payload: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+    columns = payload.get("columns")
+    frames = payload.get("frames")
+    column_count = payload.get("column_count")
 
-    match = ANIMATION_CFG_MODE_NAME_PATTERN.search(mode_name)
-    if match is None:
-        raise ValueError(f"Animation_Cfg 中无法从模式名解析 mode 序号: {mode_name!r}")
+    if not isinstance(columns, list) or not isinstance(frames, list):
+        raise ValueError(f"{sheet_name}.json 缺少 columns/frames，无法生成动画配置。")
+    if isinstance(column_count, bool) or not isinstance(column_count, int):
+        raise ValueError(f"{sheet_name}.json 缺少有效的 column_count。")
+    if len(columns) != column_count:
+        raise ValueError(f"{sheet_name}.json 的 column_count 与 columns 长度不一致。")
 
-    mode_index = int(match.group(1))
-    if not 1 <= mode_index <= ANIMATION_CFG_MAX_MODE_COUNT:
-        raise ValueError(
-            f"Animation_Cfg 模式序号超出范围 1..{ANIMATION_CFG_MAX_MODE_COUNT}: {mode_name!r}"
-        )
-    return mode_index
+    return columns, frames, column_count
 
 
-def build_animation_cfg_domain(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    payload = load_animation_cfg_source(excel_payloads)
-    domain: dict[str, Any] = {}
+def build_raw_signal_animation_domain(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    domain = {
+        kind_name: {
+            "mode_count": 0,
+            "mode_steps": [0] * ANIMATION_CFG_MAX_MODE_COUNT,
+            "mode_payloads": {},
+        }
+        for kind_name in ANIMATION_CFG_KIND_NAMES
+    }
+
+    for sheet_name, payload in excel_payloads.items():
+        parsed = parse_raw_signal_animation_sheet_name(sheet_name)
+        if parsed is None:
+            continue
+
+        kind_name, mode_index = parsed
+        if not 1 <= mode_index <= ANIMATION_CFG_MAX_MODE_COUNT:
+            raise ValueError(
+                f"{sheet_name}.json 的模式序号超出范围 1..{ANIMATION_CFG_MAX_MODE_COUNT}。"
+            )
+
+        validate_raw_signal_animation_payload(sheet_name, payload)
+        kind_domain = domain[kind_name]
+        mode_payloads = kind_domain["mode_payloads"]
+        if mode_index in mode_payloads:
+            raise ValueError(f"存在重复的 {kind_name} Mode{mode_index}.json。")
+
+        frames = payload["frames"]
+        mode_payloads[mode_index] = payload
+        kind_domain["mode_steps"][mode_index - 1] = len(frames)
 
     for kind_name in ANIMATION_CFG_KIND_NAMES:
-        animations = payload.get(f"{kind_name}_animations")
-        if not isinstance(animations, list):
-            raise ValueError(f"Animation_Cfg.json 缺少 {kind_name}_animations，无法生成动画步数占位符。")
-
-        mode_steps = [0] * ANIMATION_CFG_MAX_MODE_COUNT
-        seen_modes: set[int] = set()
-        for animation in animations:
-            if not isinstance(animation, dict):
-                raise ValueError(f"Animation_Cfg.{kind_name}_animations 存在无效模式项。")
-
-            mode_index = parse_animation_cfg_mode_index(animation.get("mode_name"))
-            if mode_index in seen_modes:
-                raise ValueError(f"Animation_Cfg.{kind_name}_animations 存在重复模式 mode{mode_index}。")
-
-            frames = animation.get("frames")
-            if not isinstance(frames, list):
-                raise ValueError(f"Animation_Cfg.{kind_name}_animations.mode{mode_index} 缺少 frames。")
-
-            seen_modes.add(mode_index)
-            mode_steps[mode_index - 1] = len(frames)
-
-        domain[kind_name] = {
-            "mode_count": len(seen_modes),
-            "mode_steps": mode_steps,
-        }
+        kind_domain = domain[kind_name]
+        kind_domain["mode_count"] = len(kind_domain["mode_payloads"])
 
     return domain
 
 
-def build_animation_cfg_placeholders(
-    animation_cfg_domain: dict[str, Any],
+def build_raw_signal_animation_mode_body(payload: dict[str, Any]) -> str:
+    sheet_name = str(payload.get("sheet_name", "raw_signal_animation"))
+    columns, frames, column_count = validate_raw_signal_animation_payload(sheet_name, payload)
+    if not frames:
+        return ""
+    return (
+        f"/**<  {format_e01_ads_animation_header(columns)} */\n"
+        f"{format_e01_ads_animation_rows(frames, column_count)}"
+    )
+
+
+def build_raw_signal_animation_placeholders(
+    animation_domain: dict[str, Any],
     required_placeholders: set[str],
 ) -> dict[str, Any]:
     animation_placeholder_required = any(
@@ -582,8 +552,13 @@ def build_animation_cfg_placeholders(
             "LOCK_MODE_TYPE_NUMS",
             "UNLOCK_MODE_TYPE_NUMS",
             "LOCK_UNLOCK_ANIMATION_TOTAL_STEPS_ROWS",
+            "LOCK_MODE1_ANIMATION_HEADER",
+            "LOCK_MODE1_ANIMATION_ROWS",
+            "UNLOCK_MODE1_ANIMATION_HEADER",
+            "UNLOCK_MODE1_ANIMATION_ROWS",
         }
         or ((name.startswith("LOCK_MODE") or name.startswith("UNLOCK_MODE")) and name.endswith("_TOTAL_STEP"))
+        or ((name.startswith("LOCK_MODE") or name.startswith("UNLOCK_MODE")) and name.endswith("_ANIMATION_BODY"))
         for name in required_placeholders
     )
     if not animation_placeholder_required:
@@ -591,70 +566,65 @@ def build_animation_cfg_placeholders(
 
     placeholders: dict[str, Any] = {}
     animation_rows: list[tuple[str, int]] = []
+
     for kind_name in ANIMATION_CFG_KIND_NAMES:
-        kind_domain = animation_cfg_domain.get(kind_name)
+        kind_domain = animation_domain.get(kind_name)
         if not isinstance(kind_domain, dict):
-            raise ValueError(f"animation_cfg 缺少 {kind_name} 配置。")
+            raise ValueError(f"signal_animation 缺少 {kind_name} 配置。")
 
         mode_count = kind_domain.get("mode_count")
-        if isinstance(mode_count, bool) or not isinstance(mode_count, int):
-            raise ValueError(f"animation_cfg.{kind_name}.mode_count 配置无效。")
-
         mode_steps = kind_domain.get("mode_steps")
+        mode_payloads = kind_domain.get("mode_payloads")
+        if isinstance(mode_count, bool) or not isinstance(mode_count, int):
+            raise ValueError(f"signal_animation.{kind_name}.mode_count 配置无效。")
         if not isinstance(mode_steps, list) or len(mode_steps) != ANIMATION_CFG_MAX_MODE_COUNT:
-            raise ValueError(f"animation_cfg.{kind_name}.mode_steps 配置无效。")
+            raise ValueError(f"signal_animation.{kind_name}.mode_steps 配置无效。")
+        if not isinstance(mode_payloads, dict):
+            raise ValueError(f"signal_animation.{kind_name}.mode_payloads 配置无效。")
 
         if kind_name == "lock" and "LOCK_MODE_TYPE_NUMS" in required_placeholders:
             placeholders["LOCK_MODE_TYPE_NUMS"] = mode_count
         if kind_name == "unlock" and "UNLOCK_MODE_TYPE_NUMS" in required_placeholders:
             placeholders["UNLOCK_MODE_TYPE_NUMS"] = mode_count
 
+        mode1_payload = mode_payloads.get(1)
+        if mode1_payload is not None:
+            sheet_name = str(mode1_payload.get("sheet_name", f"{kind_name} Mode1"))
+            columns, frames, column_count = validate_raw_signal_animation_payload(sheet_name, mode1_payload)
+            header = format_e01_ads_animation_header(columns)
+            rows = format_e01_ads_animation_rows(frames, column_count)
+        else:
+            header = ""
+            rows = ""
+
+        header_placeholder = f"{kind_name.upper()}_MODE1_ANIMATION_HEADER"
+        rows_placeholder = f"{kind_name.upper()}_MODE1_ANIMATION_ROWS"
+        if header_placeholder in required_placeholders:
+            placeholders[header_placeholder] = header
+        if rows_placeholder in required_placeholders:
+            placeholders[rows_placeholder] = rows
+
         for mode_index, total_steps in enumerate(mode_steps, start=1):
             placeholders[f"{kind_name.upper()}_MODE{mode_index}_TOTAL_STEP"] = int(total_steps)
             animation_rows.append((f"{kind_name.upper()}_MODE{mode_index}", int(total_steps)))
+
+        for mode_index in range(2, ANIMATION_CFG_MAX_MODE_COUNT + 1):
+            placeholder_name = f"{kind_name.upper()}_MODE{mode_index}_ANIMATION_BODY"
+            if placeholder_name not in required_placeholders:
+                continue
+
+            payload = mode_payloads.get(mode_index)
+            placeholders[placeholder_name] = "" if payload is None else build_raw_signal_animation_mode_body(payload)
 
     if "LOCK_UNLOCK_ANIMATION_TOTAL_STEPS_ROWS" in required_placeholders:
         value_width = max(len(f"{total_steps}U") for _label, total_steps in animation_rows)
         lines: list[str] = []
         for index, (label, total_steps) in enumerate(animation_rows):
             suffix = "," if index < len(animation_rows) - 1 else ""
-            lines.append(
-                f"    {f'{total_steps}U':<{value_width}}{suffix}   /* {label:<12} */"
-            )
+            lines.append(f"    {f'{total_steps}U':<{value_width}}{suffix}   /* {label:<12} */")
         placeholders["LOCK_UNLOCK_ANIMATION_TOTAL_STEPS_ROWS"] = "\n".join(lines)
 
     return placeholders
-
-
-def load_raw_signal_animation_payload(
-    excel_payloads: dict[str, dict[str, Any]],
-    *,
-    animation_kind: str,
-    mode_index: int,
-    purpose: str,
-) -> dict[str, Any]:
-    matches: list[tuple[str, dict[str, Any]]] = []
-    for sheet_name, payload in excel_payloads.items():
-        parsed = parse_raw_signal_animation_sheet_name(sheet_name)
-        if parsed == (animation_kind, mode_index):
-            matches.append((sheet_name, payload))
-
-    if not matches:
-        raise ValueError(
-            f"缺少 {animation_kind} Mode{mode_index}.json，无法{purpose}。"
-        )
-    if len(matches) > 1:
-        names = ", ".join(repr(sheet_name) for sheet_name, _payload in matches)
-        raise ValueError(
-            f"{animation_kind} Mode{mode_index} 原始动画存在多个匹配 sheet，无法{purpose}: {names}"
-        )
-
-    sheet_name, payload = matches[0]
-    columns = payload.get("columns")
-    frames = payload.get("frames")
-    if not isinstance(columns, list) or not isinstance(frames, list):
-        raise ValueError(f"{sheet_name}.json 缺少 columns/frames，无法{purpose}。")
-    return payload
 
 
 def normalize_e01_ads_animation_label(column_payload: dict[str, Any]) -> str:
@@ -717,140 +687,6 @@ def format_e01_ads_animation_rows(frames: list[dict[str, Any]], column_count: in
         normalized_frames.append((normalized_values, time_ms))
 
     return format_signal_animation_rows(normalized_frames)
-
-
-def format_animation_cfg_rows(frames: list[dict[str, Any]]) -> str:
-    normalized_frames: list[tuple[list[int], int]] = []
-
-    for frame in frames:
-        channels = frame.get("channels")
-        if not isinstance(channels, dict):
-            raise ValueError("Animation_Cfg 动画帧缺少 channels，无法生成 C 数组。")
-
-        values = [0] * len(SIGNAL_ANIMATION_CHANNEL_LAYOUT)
-        for channel_name, value in channels.items():
-            if not isinstance(channel_name, str):
-                raise ValueError("Animation_Cfg 动画帧存在非字符串通道名，无法生成 C 数组。")
-            if channel_name not in SIGNAL_ANIMATION_CHANNEL_INDEX:
-                raise ValueError(f"Animation_Cfg 动画帧存在未知通道 {channel_name!r}。")
-            if isinstance(value, bool) or not isinstance(value, int):
-                raise ValueError(f"Animation_Cfg 动画帧通道 {channel_name!r} 存在非整数亮度值。")
-            values[SIGNAL_ANIMATION_CHANNEL_INDEX[channel_name]] = value
-
-        time_ms = frame.get("time_ms")
-        if isinstance(time_ms, bool) or not isinstance(time_ms, int):
-            raise ValueError("Animation_Cfg 动画帧存在无效 time_ms，无法生成 C 数组。")
-
-        normalized_frames.append((values, time_ms))
-
-    return format_signal_animation_rows(normalized_frames)
-
-
-def build_animation_cfg_mode_body(animation: dict[str, Any]) -> str:
-    frames = animation.get("frames")
-    if not isinstance(frames, list):
-        raise ValueError("Animation_Cfg 动画模式缺少 frames，无法生成 C 数组。")
-    if not frames:
-        return ""
-    return f"/**<  {SIGNAL_ANIMATION_HEADER} */\n{format_animation_cfg_rows(frames)}"
-
-
-def build_animation_cfg_mode_data_placeholders(
-    excel_payloads: dict[str, dict[str, Any]],
-    required_placeholders: set[str],
-) -> dict[str, str]:
-    needed_placeholders = {
-        f"{kind_name.upper()}_MODE{mode_index}_ANIMATION_BODY"
-        for kind_name in ANIMATION_CFG_KIND_NAMES
-        for mode_index in range(2, ANIMATION_CFG_MAX_MODE_COUNT + 1)
-    }
-    if not any(name in needed_placeholders for name in required_placeholders):
-        return {}
-
-    payload = load_animation_cfg_source(excel_payloads)
-    placeholders: dict[str, str] = {}
-
-    for kind_name in ANIMATION_CFG_KIND_NAMES:
-        animations = payload.get(f"{kind_name}_animations")
-        if not isinstance(animations, list):
-            raise ValueError(f"Animation_Cfg.json 缺少 {kind_name}_animations，无法生成动画数组占位符。")
-
-        mode_to_animation: dict[int, dict[str, Any]] = {}
-        for animation in animations:
-            if not isinstance(animation, dict):
-                raise ValueError(f"Animation_Cfg.{kind_name}_animations 存在无效模式项。")
-            mode_index = parse_animation_cfg_mode_index(animation.get("mode_name"))
-            if mode_index in mode_to_animation:
-                raise ValueError(f"Animation_Cfg.{kind_name}_animations 存在重复模式 mode{mode_index}。")
-            mode_to_animation[mode_index] = animation
-
-        for mode_index in range(2, ANIMATION_CFG_MAX_MODE_COUNT + 1):
-            placeholder_name = f"{kind_name.upper()}_MODE{mode_index}_ANIMATION_BODY"
-            if placeholder_name not in required_placeholders:
-                continue
-
-            animation = mode_to_animation.get(mode_index)
-            placeholders[placeholder_name] = "" if animation is None else build_animation_cfg_mode_body(animation)
-
-    return placeholders
-
-
-def build_e01_ads_mode1_placeholders(
-    excel_payloads: dict[str, dict[str, Any]],
-    animation_cfg_domain: dict[str, Any],
-    required_placeholders: set[str],
-    *,
-    animation_kind: str,
-    mode_index: int,
-    header_placeholder: str,
-    rows_placeholder: str,
-) -> dict[str, str]:
-    placeholder_required = any(
-        name in {header_placeholder, rows_placeholder} for name in required_placeholders
-    )
-    if not placeholder_required:
-        return {}
-
-    payload = load_raw_signal_animation_payload(
-        excel_payloads,
-        animation_kind=animation_kind,
-        mode_index=mode_index,
-        purpose=f"生成 {animation_kind.upper()} MODE{mode_index} 动画占位符",
-    )
-    columns = payload["columns"]
-    frames = payload["frames"]
-    column_count = payload.get("column_count")
-    if isinstance(column_count, bool) or not isinstance(column_count, int):
-        raise ValueError(f"{animation_kind} Mode{mode_index}.json 缺少有效的 column_count。")
-    if len(columns) != column_count:
-        raise ValueError(f"{animation_kind} Mode{mode_index}.json 的 column_count 与 columns 长度不一致。")
-
-    mode_domain = animation_cfg_domain.get(animation_kind)
-    if not isinstance(mode_domain, dict):
-        raise ValueError(
-            f"animation_cfg 缺少 {animation_kind} 配置，无法生成 {animation_kind.upper()} MODE1 动画。"
-        )
-    mode_steps = mode_domain.get("mode_steps")
-    if not isinstance(mode_steps, list) or not mode_steps:
-        raise ValueError(
-            f"animation_cfg.{animation_kind}.mode_steps 配置无效，无法生成 {animation_kind.upper()} MODE{mode_index} 动画。"
-        )
-    expected_frame_count = mode_steps[mode_index - 1]
-    if isinstance(expected_frame_count, bool) or not isinstance(expected_frame_count, int):
-        raise ValueError(
-            f"animation_cfg.{animation_kind}.mode_steps[{mode_index - 1}] 配置无效，无法生成 {animation_kind.upper()} MODE{mode_index} 动画。"
-        )
-    if len(frames) != expected_frame_count:
-        raise ValueError(
-            f"{animation_kind} Mode{mode_index} 原始帧数 {len(frames)} 与 {animation_kind.upper()}_MODE{mode_index}_TOTAL_STEP {expected_frame_count} 不一致。"
-        )
-
-    placeholders: dict[str, str] = {}
-    if header_placeholder in required_placeholders:
-        placeholders[header_placeholder] = format_e01_ads_animation_header(columns)
-    if rows_placeholder in required_placeholders:
-        placeholders[rows_placeholder] = format_e01_ads_animation_rows(frames, column_count)
-    return placeholders
 
 
 def coerce_chcm_cfg_word(value: Any) -> int | None:
@@ -1177,32 +1013,9 @@ def build_render_context(
     placeholders = {**SCALAR_DEFAULTS, **extract_scalar_placeholders(kconfig_payload, excel_payloads)}
     sections: dict[str, str] = {}
     cvcc_cfg = build_cvcc_cfg_domain(excel_payloads, kconfig_payload)
-    animation_cfg = build_animation_cfg_domain(excel_payloads)
+    signal_animation = build_raw_signal_animation_domain(excel_payloads)
     placeholders.update(build_cvcc_cfg_placeholders(cvcc_cfg, required_placeholders))
-    placeholders.update(build_animation_cfg_placeholders(animation_cfg, required_placeholders))
-    placeholders.update(
-        build_e01_ads_mode1_placeholders(
-            excel_payloads,
-            animation_cfg,
-            required_placeholders,
-            animation_kind="lock",
-            mode_index=1,
-            header_placeholder="LOCK_MODE1_ANIMATION_HEADER",
-            rows_placeholder="LOCK_MODE1_ANIMATION_ROWS",
-        )
-    )
-    placeholders.update(
-        build_e01_ads_mode1_placeholders(
-            excel_payloads,
-            animation_cfg,
-            required_placeholders,
-            animation_kind="unlock",
-            mode_index=1,
-            header_placeholder="UNLOCK_MODE1_ANIMATION_HEADER",
-            rows_placeholder="UNLOCK_MODE1_ANIMATION_ROWS",
-        )
-    )
-    placeholders.update(build_animation_cfg_mode_data_placeholders(excel_payloads, required_placeholders))
+    placeholders.update(build_raw_signal_animation_placeholders(signal_animation, required_placeholders))
     placeholders.update(build_cvcc_output_voltage_placeholders(kconfig_payload, required_placeholders))
     placeholders.update(build_chcm_cfg_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_motor_placeholders(excel_payloads, required_placeholders))
@@ -1219,7 +1032,7 @@ def build_render_context(
         "placeholders": placeholders,
         "sections": sections,
         "cvcc_cfg": cvcc_cfg,
-        "animation_cfg": animation_cfg,
+        "signal_animation": signal_animation,
         "excel": excel_payloads,
         "kconfig": kconfig_payload,
     }
