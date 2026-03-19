@@ -39,6 +39,37 @@ config SYSTEM_COM_VERION
   default 0 if COM_VERSION_V4
   default 1 if COM_VERSION_V5
 
+choice
+  prompt "CVCC IC Type"
+  default CVCC_IC_TYPE_NSL20912
+
+  config CVCC_IC_TYPE_TPS929120
+    bool "TPS929120"
+
+  config CVCC_IC_TYPE_TPS929160
+    bool "TPS929160"
+
+  config CVCC_IC_TYPE_TPS929240
+    bool "TPS929240"
+
+  config CVCC_IC_TYPE_NSL20912
+    bool "NSL20912"
+endchoice
+
+choice
+  prompt "CVCC UART Channel"
+  default CVCC_UART_CHANNEL_SUB_UARTCAN_1
+
+  config CVCC_UART_CHANNEL_SUB_UARTCAN_0
+    bool "SUB_UARTCAN_0"
+
+  config CVCC_UART_CHANNEL_SUB_UARTCAN_1
+    bool "SUB_UARTCAN_1"
+
+  config CVCC_UART_CHANNEL_SUB_UARTCAN_2
+    bool "SUB_UARTCAN_2"
+endchoice
+
 menu "CVCC Output Voltage Table"
 
 config CVCC_OUTPUT_VOLTAGE_LEVELS

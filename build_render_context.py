@@ -20,6 +20,8 @@ SCALAR_DEFAULTS = {
     "PROJECT_NAME": "PROJECT_A_SMALL",
     "SYSTEM_COM_VERION": "VERSION_V5",
     "EEA_X": "VERSION_V5",
+    "CVCC_IC_TYPE": "CVCC_NSL20912",
+    "CVCC_UART_CHANNEL": "SUB_UARTCAN_1",
     "USED_MATRIX_CHIP_NUMS": 0,
     "USED_MATRIX_LED_NUMS": 0,
     "USED_CVCC_CHIP_NUMS": 0,
@@ -53,6 +55,19 @@ CVCC_OUTPUT_VOLTAGE_CONFIGS = (
     ("8V2", 26, "8.2V"),
     ("8V4", 23, "8.4V"),
 )
+CVCC_CFG_IC_ADDR_INDEXES = tuple(range(12))
+CVCC_CFG_UNUSED_IC_ADDR = 255
+CVCC_IC_TYPE_SYMBOL_TO_MACRO = {
+    "CVCC_IC_TYPE_TPS929120": "CVCC_TPS929120",
+    "CVCC_IC_TYPE_TPS929160": "CVCC_TPS929160",
+    "CVCC_IC_TYPE_TPS929240": "CVCC_TPS929240",
+    "CVCC_IC_TYPE_NSL20912": "CVCC_NSL20912",
+}
+CVCC_UART_CHANNEL_SYMBOL_TO_MACRO = {
+    "CVCC_UART_CHANNEL_SUB_UARTCAN_0": "SUB_UARTCAN_0",
+    "CVCC_UART_CHANNEL_SUB_UARTCAN_1": "SUB_UARTCAN_1",
+    "CVCC_UART_CHANNEL_SUB_UARTCAN_2": "SUB_UARTCAN_2",
+}
 CHCM_CFG_ITEM_COUNT = 27
 CHCM_CFG_DEFAULT_NAME = {
     0: "Inactive",
@@ -240,6 +255,180 @@ def read_kconfig_int_symbol(symbols: dict[str, dict[str, Any]], name: str, defau
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"Kconfig 符号 {name} 必须是整数。")
     return value
+
+
+def active_kconfig_choice_symbol(symbols: dict[str, dict[str, Any]], names: tuple[str, ...]) -> str | None:
+    for name in names:
+        symbol = symbols.get(name)
+        if isinstance(symbol, dict) and symbol.get("value") is True:
+            return name
+    return None
+
+
+def resolve_kconfig_choice_macro(
+    symbols: dict[str, dict[str, Any]],
+    symbol_to_macro: dict[str, str],
+    error_message: str,
+) -> str:
+    active_symbol = active_kconfig_choice_symbol(symbols, tuple(symbol_to_macro))
+    if active_symbol is None:
+        raise ValueError(error_message)
+    return symbol_to_macro[active_symbol]
+
+
+def format_cvcc_cfg_ic_addr_value(value: int) -> str:
+    return f"{value:3d}"
+
+
+def format_cvcc_cfg_used_switch_value(value: int) -> str:
+    return f"{value:2d}"
+
+
+def format_cvcc_cfg_max_current_value(value: int) -> str:
+    return f"{value:2d}"
+
+
+def parse_cvcc_cfg_channel_bit(channel_name: str) -> int:
+    match = re.fullmatch(r"CH(\d+)", channel_name)
+    if match is None:
+        raise ValueError(f"CH_Cfg.json 中存在无效通道名 {channel_name!r}，无法生成 CVCC switch_mask。")
+
+    bit_index = int(match.group(1))
+    if bit_index >= 32:
+        raise ValueError(f"CH_Cfg.json 中通道 {channel_name!r} 超出 uint32_t 掩码范围。")
+    return bit_index
+
+
+def format_cvcc_cfg_switch_mask_value(value: int) -> str:
+    return f"0x{value:08x}"
+
+
+def load_cvcc_cfg_excel_sources(excel_payloads: dict[str, dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    ch_cfg_payload = require_excel_payload(excel_payloads, "CH_Cfg", purpose="生成 CVCC 配置占位符")
+    ics = ch_cfg_payload.get("ics")
+    if not isinstance(ics, dict):
+        raise ValueError("CH_Cfg.json 缺少 ics，无法生成 CVCC 配置占位符。")
+
+    current_config_payload = require_excel_payload(excel_payloads, "current_config", purpose="生成 CVCC 配置占位符")
+    current_channels = current_config_payload.get("channels")
+    if not isinstance(current_channels, dict):
+        raise ValueError("current_config.json 缺少 channels，无法生成 CVCC 配置占位符。")
+
+    return ics, current_channels
+
+
+def resolve_cvcc_cfg_ic_max_current(
+    ic_name: str,
+    channel_names: tuple[str, ...],
+    current_channels: dict[str, dict[str, Any]],
+) -> int:
+    max_currents: set[int] = set()
+    for channel_name in channel_names:
+        channel_key = f"{ic_name}-{channel_name}"
+        channel_payload = current_channels.get(channel_key)
+        if not isinstance(channel_payload, dict):
+            raise ValueError(f"current_config.json 缺少通道 {channel_key}，无法生成 CVCC max_current。")
+
+        max_current = channel_payload.get("max_current_per_channel")
+        if max_current is None:
+            continue
+        if isinstance(max_current, bool) or not isinstance(max_current, int):
+            raise ValueError(f"current_config.json 中 {channel_key}.max_current_per_channel 必须是整数。")
+        max_currents.add(max_current)
+
+    if not max_currents:
+        if channel_names:
+            raise ValueError(f"{ic_name} 在 CH_Cfg 中有使用通道，但 current_config 中缺少 max_current_per_channel。")
+        return 0
+    if len(max_currents) != 1:
+        values = ", ".join(str(value) for value in sorted(max_currents))
+        raise ValueError(f"{ic_name} 的 max_current_per_channel 不唯一: {values}")
+    return next(iter(max_currents))
+
+
+def build_cvcc_cfg_domain(
+    excel_payloads: dict[str, dict[str, Any]],
+    kconfig_payload: dict[str, Any],
+) -> dict[str, Any]:
+    symbols = load_kconfig_symbols(kconfig_payload)
+    ics, current_channels = load_cvcc_cfg_excel_sources(excel_payloads)
+
+    cvcc_cfg_ics: dict[str, dict[str, Any]] = {}
+    for ic_index in CVCC_CFG_IC_ADDR_INDEXES:
+        ic_name = f"IC{ic_index}"
+        channels = ics.get(ic_name)
+        if not isinstance(channels, dict):
+            raise ValueError(f"CH_Cfg.json 中 {ic_name} 不是对象，无法生成 CVCC 配置占位符。")
+
+        channel_names = tuple(channels)
+        used_switch = len(channel_names)
+        switch_mask = 0
+        for channel_name in channel_names:
+            switch_mask |= 1 << parse_cvcc_cfg_channel_bit(channel_name)
+        max_current = resolve_cvcc_cfg_ic_max_current(ic_name, channel_names, current_channels)
+        ic_addr = ic_index if used_switch > 0 else CVCC_CFG_UNUSED_IC_ADDR
+
+        cvcc_cfg_ics[ic_name] = {
+            "addr": ic_addr,
+            "used_switch": used_switch,
+            "switch_mask": format_cvcc_cfg_switch_mask_value(switch_mask),
+            "max_current": max_current,
+        }
+
+    return {
+        "ic_type": resolve_kconfig_choice_macro(
+            symbols,
+            CVCC_IC_TYPE_SYMBOL_TO_MACRO,
+            "Kconfig 中未选择 CVCC IC Type，无法生成 CVCC 配置。",
+        ),
+        "uart_channel": resolve_kconfig_choice_macro(
+            symbols,
+            CVCC_UART_CHANNEL_SYMBOL_TO_MACRO,
+            "Kconfig 中未选择 CVCC UART Channel，无法生成 CVCC 配置。",
+        ),
+        "ics": cvcc_cfg_ics,
+    }
+
+
+def build_cvcc_cfg_placeholders(
+    cvcc_cfg_domain: dict[str, Any],
+    required_placeholders: set[str],
+) -> dict[str, str]:
+    cvcc_placeholder_required = any(
+        name in {"CVCC_IC_TYPE", "CVCC_UART_CHANNEL"}
+        or (name.startswith("CVCC_CFG_IC") and (
+            name.endswith("_ADDR")
+            or name.endswith("_USED_SWITCH")
+            or name.endswith("_SWITCH_MASK")
+            or name.endswith("_MAX_CURRENT")
+        ))
+        for name in required_placeholders
+    )
+    if not cvcc_placeholder_required:
+        return {}
+
+    placeholders: dict[str, str] = {}
+    if "CVCC_IC_TYPE" in required_placeholders:
+        placeholders["CVCC_IC_TYPE"] = str(cvcc_cfg_domain["ic_type"])
+    if "CVCC_UART_CHANNEL" in required_placeholders:
+        placeholders["CVCC_UART_CHANNEL"] = str(cvcc_cfg_domain["uart_channel"])
+
+    cvcc_cfg_ics = cvcc_cfg_domain.get("ics")
+    if not isinstance(cvcc_cfg_ics, dict):
+        raise ValueError("cvcc_cfg 缺少 ics，无法生成占位符。")
+
+    for ic_index in CVCC_CFG_IC_ADDR_INDEXES:
+        ic_name = f"IC{ic_index}"
+        ic_payload = cvcc_cfg_ics.get(ic_name)
+        if not isinstance(ic_payload, dict):
+            raise ValueError(f"cvcc_cfg 缺少 {ic_name}，无法生成占位符。")
+
+        placeholders[f"CVCC_CFG_IC{ic_index}_ADDR"] = format_cvcc_cfg_ic_addr_value(int(ic_payload["addr"]))
+        placeholders[f"CVCC_CFG_IC{ic_index}_USED_SWITCH"] = format_cvcc_cfg_used_switch_value(int(ic_payload["used_switch"]))
+        placeholders[f"CVCC_CFG_IC{ic_index}_SWITCH_MASK"] = str(ic_payload["switch_mask"])
+        placeholders[f"CVCC_CFG_IC{ic_index}_MAX_CURRENT"] = format_cvcc_cfg_max_current_value(int(ic_payload["max_current"]))
+
+    return placeholders
 
 
 def build_cvcc_output_voltage_placeholders(
@@ -600,6 +789,8 @@ def build_render_context(
 ) -> dict[str, Any]:
     placeholders = {**SCALAR_DEFAULTS, **extract_scalar_placeholders(kconfig_payload, excel_payloads)}
     sections: dict[str, str] = {}
+    cvcc_cfg = build_cvcc_cfg_domain(excel_payloads, kconfig_payload)
+    placeholders.update(build_cvcc_cfg_placeholders(cvcc_cfg, required_placeholders))
     placeholders.update(build_cvcc_output_voltage_placeholders(kconfig_payload, required_placeholders))
     placeholders.update(build_chcm_cfg_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_motor_placeholders(excel_payloads, required_placeholders))
@@ -615,6 +806,7 @@ def build_render_context(
         "sheet_name": "render_context",
         "placeholders": placeholders,
         "sections": sections,
+        "cvcc_cfg": cvcc_cfg,
         "excel": excel_payloads,
         "kconfig": kconfig_payload,
     }

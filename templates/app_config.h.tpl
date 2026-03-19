@@ -37,6 +37,8 @@ typedef uint8_t MATRIX_TYPE_T;
 #define CVCC_TPS929160           (0x01U)/**< 16 CHANNELS */
 #define CVCC_TPS929240           (0x02U)/**< 24 CHANNELS */
 #define CVCC_NSL20912            (0x03U)/**< 12 CHANNELS */
+/* All CVCC ICs share one Kconfig-selected type. */
+#define USED_CVCC_IC_TYPE        ( @CVCC_IC_TYPE@ )
 
 typedef uint8_t CVCC_TYPE_T;
 
@@ -44,11 +46,12 @@ typedef uint8_t CVCC_TYPE_T;
 #define USED_MATRIX_CHIP_NUMS    ( 3U )
 #define USED_MATRIX_LED_NUMS     ( 32U )
 #endif
-#define USED_CVCC_CHIP_NUMS      (11U )
+#define USED_CVCC_CHIP_NUMS      ( @USED_CVCC_CHIP_NUMS@U )
 
 #define SUB_UARTCAN_0  ( 0U )
 #define SUB_UARTCAN_1  ( 1U )
 #define SUB_UARTCAN_2  ( 2U )
+#define USED_CVCC_UARTCHN        ( @CVCC_UART_CHANNEL@ )
 typedef uint8_t UARTCAN_IDX_T;
 
 #define ADC_USED_SW    ( 0U )

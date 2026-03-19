@@ -295,7 +295,7 @@ render context JSON 推荐结构可参考 [templates/README.md](templates/README
 }
 ```
 
-`CH_Cfg` 会输出扁平化后的通道配置映射:
+`CH_Cfg` 会按 IC 号分组输出通道配置:
 
 ```json
 {
@@ -306,17 +306,19 @@ render context JSON 推荐结构可参考 [templates/README.md](templates/README
   "config_type_descriptions": {
     "0": "..."
   },
-  "channels": {
-    "IC0-CH00": 2,
-    "IC0-CH01": 2
+  "ics": {
+    "IC0": {
+      "CH00": 2,
+      "CH01": 2
+    }
   }
 }
 ```
 
 说明:
 
-- 通道 key 已统一成 `ICx-CHyy`，便于和 `Animation_Cfg`、`TI_sequential`、`current_config` 直接关联
-- `channels` 使用扁平对象而不是 `ics` 数组，程序可以直接按通道 ID 索引
+- 顶层 `ics` 以 `ICx` 为 key 分组，每组内部再用 `CHyy` 保存该 IC 的通道配置
+- 通道名仍统一成 `CHyy` 格式，便于和 `Animation_Cfg`、`TI_sequential`、`current_config` 做映射
 - 配置类型说明仍然保留在 `config_type_descriptions`
 
 `Animation_Cfg` 会按动画模式分组输出每一帧的 PWM 通道值:

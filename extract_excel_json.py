@@ -1073,22 +1073,30 @@ def normalize_ch_cfg_channel_name(channel_name: str) -> str:
     return f"CH{int(match.group(1)):02d}"
 
 
-def build_ch_cfg_channel_id(ic_name: str, channel_name: str) -> str:
-    return f"{normalize_ch_cfg_ic_name(ic_name)}-{normalize_ch_cfg_channel_name(channel_name)}"
-
-
 def condense_ch_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
-    channels: dict[str, Any] = {}
+    ics: dict[str, dict[str, Any]] = {}
+    channel_count = 0
     for ic in parsed["ics"]:
+        ic_name = normalize_ch_cfg_ic_name(ic["ic_name"])
+        if ic_name in ics:
+            raise ValueError(f"CH_Cfg 中存在重复 IC: {ic_name}")
+
+        channels: dict[str, Any] = {}
         for channel_name, config_type in ic["channels"].items():
-            channels[build_ch_cfg_channel_id(ic["ic_name"], channel_name)] = config_type
+            normalized_channel_name = normalize_ch_cfg_channel_name(channel_name)
+            if normalized_channel_name in channels:
+                raise ValueError(f"CH_Cfg 中 {ic_name} 存在重复通道: {normalized_channel_name}")
+            channels[normalized_channel_name] = config_type
+
+        ics[ic_name] = channels
+        channel_count += len(channels)
 
     return with_output_schema({
         "sheet_name": parsed["sheet_name"],
         "ic_count": len(parsed["ics"]),
-        "channel_count": len(channels),
+        "channel_count": channel_count,
         "config_type_descriptions": parsed["config_type_descriptions"],
-        "channels": channels,
+        "ics": ics,
     })
 
 

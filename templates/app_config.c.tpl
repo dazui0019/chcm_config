@@ -5,18 +5,23 @@
 const __attribute__ ((used,used,section(".parameter_config_0"))) uint8_t g_communication_version = @SYSTEM_COM_VERION@;
 const __attribute__ ((used,used,section(".parameter_config_1"))) uint8_t g_used_cvcc_ic_nums = USED_CVCC_CHIP_NUMS;
 const __attribute__ ((used,used,section(".parameter_config_2"))) APP_Cvcc_Cfg_T App_cvcc_cfg_L[USED_CVCC_CHIP_NUMS] = {
-               /** Cvcc IC addr,     Cvcc IC type,      used_uartchn,     Used switch,   switch_mask  max_current */     
-   /**  IC0 */ {             0U,   CVCC_NSL20912,        SUB_UARTCAN_1,          12U,    0x00000fffU, 99 },
-   /**  IC1 */ {             1U,   CVCC_NSL20912,        SUB_UARTCAN_1,          12U,    0x00000fffU, 99 },
-   /**  IC2 */ {             2U,   CVCC_NSL20912,        SUB_UARTCAN_1,          12U,    0x00000fffU, 75 },
-   /**  IC3 */ {             3U,   CVCC_NSL20912,        SUB_UARTCAN_1,          12U,    0x00000fffU, 75 },
-   /**  IC4 */ {             4U,   CVCC_NSL20912,        SUB_UARTCAN_1,          12U,    0x00000fffU, 75 },
-   /**  IC5 */ {             5U,   CVCC_NSL20912,        SUB_UARTCAN_1,          12U,    0x00000fffU, 75 },
-   /**  IC6 */ {             6U,   CVCC_NSL20912,        SUB_UARTCAN_1,          12U,    0x00000fffU, 75 },
-   /**  IC7 */ {             7U,   CVCC_NSL20912,        SUB_UARTCAN_1,          12U,    0x00000fffU, 50 },
-   /**  IC8 */ {             8U,   CVCC_NSL20912,        SUB_UARTCAN_1,          12U,    0x00000fffU, 50 },
-   /**  IC8 */ {             255U,   CVCC_NSL20912,        SUB_UARTCAN_1,        12U,    0x00000fffU, 0  },/*无此ID*/
-   /**  IC10 */ {            10U,   CVCC_NSL20912,        SUB_UARTCAN_1,         12U,    0x00000fffU, 99 },
+    /** Cvcc IC addr,     Cvcc IC type,      used_uartchn,     Used switch,   switch_mask  max_current */
+    /* IC addr comes from CH_Cfg IC ID. If Used switch is 0, addr renders as 255U. */
+    /* Used switch comes from the number of channels with data under the same IC in CH_Cfg. */
+    /* switch_mask comes from CH_Cfg too: bit0 -> switch0, bit1 -> switch1, ... */
+    /* max_current comes from current_config.max_current_per_channel and is shared by each IC. */
+    {  @CVCC_CFG_IC0_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC0_USED_SWITCH@U,   @CVCC_CFG_IC0_SWITCH_MASK@U,  @CVCC_CFG_IC0_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC1_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC1_USED_SWITCH@U,   @CVCC_CFG_IC1_SWITCH_MASK@U,  @CVCC_CFG_IC1_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC2_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC2_USED_SWITCH@U,   @CVCC_CFG_IC2_SWITCH_MASK@U,  @CVCC_CFG_IC2_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC3_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC3_USED_SWITCH@U,   @CVCC_CFG_IC3_SWITCH_MASK@U,  @CVCC_CFG_IC3_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC4_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC4_USED_SWITCH@U,   @CVCC_CFG_IC4_SWITCH_MASK@U,  @CVCC_CFG_IC4_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC5_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC5_USED_SWITCH@U,   @CVCC_CFG_IC5_SWITCH_MASK@U,  @CVCC_CFG_IC5_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC6_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC6_USED_SWITCH@U,   @CVCC_CFG_IC6_SWITCH_MASK@U,  @CVCC_CFG_IC6_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC7_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC7_USED_SWITCH@U,   @CVCC_CFG_IC7_SWITCH_MASK@U,  @CVCC_CFG_IC7_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC8_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC8_USED_SWITCH@U,   @CVCC_CFG_IC8_SWITCH_MASK@U,  @CVCC_CFG_IC8_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC9_ADDR@U,   USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC9_USED_SWITCH@U,   @CVCC_CFG_IC9_SWITCH_MASK@U,  @CVCC_CFG_IC9_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC10_ADDR@U,  USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC10_USED_SWITCH@U,  @CVCC_CFG_IC10_SWITCH_MASK@U, @CVCC_CFG_IC10_MAX_CURRENT@ },
+    {  @CVCC_CFG_IC11_ADDR@U,  USED_CVCC_IC_TYPE,     USED_CVCC_UARTCHN,     @CVCC_CFG_IC11_USED_SWITCH@U,  @CVCC_CFG_IC11_SWITCH_MASK@U, @CVCC_CFG_IC11_MAX_CURRENT@ },
 };
 
 /* CVCC输出电压表: 使用CVCC_OUTPUT_VOLTAGE_IDX_xVx访问，表项值为对应目标电压的BUCK寄存器码值。 */
