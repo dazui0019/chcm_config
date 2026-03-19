@@ -205,45 +205,39 @@ typedef struct
    int16_t motor_afs_info[4][3];
    uint16_t dc_motor_level_info[4];
 }MOTOR_CONIFICTION_TABLE_T;
-/* Const memory section */
+
 extern const __attribute__ ((section(".parameter_config_0"))) uint8_t g_communication_version;
 extern const __attribute__ ((section(".parameter_config_1"))) uint8_t g_used_cvcc_ic_nums;
 extern const __attribute__ ((section(".parameter_config_2"))) APP_Cvcc_Cfg_T App_cvcc_cfg_L[USED_CVCC_CHIP_NUMS];
 extern const __attribute__ ((section(".parameter_config_3"))) uint8_t g_cvcc_out_voltage_table[CVCC_OUTPUT_VOLTAGE_LEVELS];
 extern const __attribute__ ((section(".parameter_config_60"))) MOTOR_CONIFICTION_TABLE_T motor_config_infomation;
 
-/* Declaration for custom storage class: Const */
-/* extern const __attribute__ ((section(".parameter_config_4"))) uint32_t u32_ti_sweep_frame[TI_SWEEP_USER_STEP + 1u][TI_USED_LED_NUMS_DATA_LENS];*/
+extern const __attribute__ ((section(".parameter_config_4"))) uint8_t u8_ti_sweep_led_nums;
+extern const __attribute__ ((section(".parameter_config_5"))) uint8_t u8_ti_sweep_led_k[TI_SWEEP_USER_STEP + 1u][TI_USED_LED_NUMS];
 
-extern const __attribute__ ((section(".parameter_config_4"))) uint8_t u8_ti_sweep_led_nums;/**< Number of used LEDs */
-extern const __attribute__ ((section(".parameter_config_5"))) uint8_t u8_ti_sweep_led_k[TI_SWEEP_USER_STEP + 1u][TI_USED_LED_NUMS];/* Referenced by:
-                                                 * '<S18>/cvcc_current_duty_mode_assigment'
-                                                 * '<S91>/assign_cvcc_duty_mode_chart'
-                                                 */
-
-/**< lock/unlock animation control define */
-#define LOCK_ANIMATION_MODE1    (  1U )  /**< 闭锁模式1 */
-#define LOCK_ANIMATION_MODE2    (  2U )  /**< 闭锁模式2 */
-#define LOCK_ANIMATION_MODE3    (  3U )  /**< 闭锁模式3 */
-#define LOCK_ANIMATION_MODE4    (  4U )  /**< 闭锁模式4 */
-#define LOCK_ANIMATION_MODE5    (  5U )  /**< 闭锁模式5 */
-#define UNLOCK_ANIMATION_MODE1  (  6U )  /**< 解锁模式1 */
-#define UNLOCK_ANIMATION_MODE2  (  7U )  /**< 解锁模式2 */
-#define UNLOCK_ANIMATION_MODE3  (  8U )  /**< 解锁模式3 */
-#define UNLOCK_ANIMATION_MODE4  (  9U )  /**< 解锁模式4 */
-#define UNLOCK_ANIMATION_MODE5  ( 10U )  /**< 解锁模式5 */
+/* lock/unlock animation control define */
+#define LOCK_ANIMATION_MODE1    (  1U )  // 闭锁模式1
+#define LOCK_ANIMATION_MODE2    (  2U )  // 闭锁模式2
+#define LOCK_ANIMATION_MODE3    (  3U )  // 闭锁模式3
+#define LOCK_ANIMATION_MODE4    (  4U )  // 闭锁模式4
+#define LOCK_ANIMATION_MODE5    (  5U )  // 闭锁模式5
+#define UNLOCK_ANIMATION_MODE1  (  6U )  // 解锁模式1
+#define UNLOCK_ANIMATION_MODE2  (  7U )  // 解锁模式2
+#define UNLOCK_ANIMATION_MODE3  (  8U )  // 解锁模式3
+#define UNLOCK_ANIMATION_MODE4  (  9U )  // 解锁模式4
+#define UNLOCK_ANIMATION_MODE5  ( 10U )  // 解锁模式5
 
 /**< lock/unlock animation mode total frames */
-#define LOCK_MODE1_TOTAL_STEP    ( 301U )  /**< 闭锁模式1总步数 */
-#define LOCK_MODE2_TOTAL_STEP    ( 0U )  /**< 闭锁模式2总步数 */
-#define LOCK_MODE3_TOTAL_STEP    ( 0U )  /**< 闭锁模式3总步数 */
-#define LOCK_MODE4_TOTAL_STEP    ( 0U )  /**< 闭锁模式4总步数 */
-#define LOCK_MODE5_TOTAL_STEP    ( 0U )  /**< 闭锁模式5总步数 */
-#define UNLOCK_MODE1_TOTAL_STEP  ( 301U )  /**< 解锁模式1总步数 */
-#define UNLOCK_MODE2_TOTAL_STEP  ( 0U )  /**< 解锁模式2总步数 */
-#define UNLOCK_MODE3_TOTAL_STEP  ( 0U )  /**< 解锁模式3总步数 */
-#define UNLOCK_MODE4_TOTAL_STEP  ( 0U )  /**< 解锁模式4总步数 */
-#define UNLOCK_MODE5_TOTAL_STEP  ( 0U )  /**< 解锁模式5总步数 */
+#define LOCK_MODE1_TOTAL_STEP    ( @LOCK_MODE1_TOTAL_STEP@U )  /**< 闭锁模式1总步数 */
+#define LOCK_MODE2_TOTAL_STEP    ( @LOCK_MODE2_TOTAL_STEP@U )  /**< 闭锁模式2总步数 */
+#define LOCK_MODE3_TOTAL_STEP    ( @LOCK_MODE3_TOTAL_STEP@U )  /**< 闭锁模式3总步数 */
+#define LOCK_MODE4_TOTAL_STEP    ( @LOCK_MODE4_TOTAL_STEP@U )  /**< 闭锁模式4总步数 */
+#define LOCK_MODE5_TOTAL_STEP    ( @LOCK_MODE5_TOTAL_STEP@U )  /**< 闭锁模式5总步数 */
+#define UNLOCK_MODE1_TOTAL_STEP  ( @UNLOCK_MODE1_TOTAL_STEP@U )  /**< 解锁模式1总步数 */
+#define UNLOCK_MODE2_TOTAL_STEP  ( @UNLOCK_MODE2_TOTAL_STEP@U )  /**< 解锁模式2总步数 */
+#define UNLOCK_MODE3_TOTAL_STEP  ( @UNLOCK_MODE3_TOTAL_STEP@U )  /**< 解锁模式3总步数 */
+#define UNLOCK_MODE4_TOTAL_STEP  ( @UNLOCK_MODE4_TOTAL_STEP@U )  /**< 解锁模式4总步数 */
+#define UNLOCK_MODE5_TOTAL_STEP  ( @UNLOCK_MODE5_TOTAL_STEP@U )  /**< 解锁模式5总步数 */
 
 #define LOCK_UNLOCK_MAX_MODE_NUMS  ( 10U ) /**< 最大闭锁/解锁动画模式数 */
 
@@ -261,9 +255,7 @@ extern const __attribute__ ((section(".parameter_config_5"))) uint8_t u8_ti_swee
 
 extern const __attribute__ ((section(".parameter_config_6"))) uint16_t u8_lock_unlock_animation_total_steps[LOCK_UNLOCK_MAX_MODE_NUMS];
 extern const __attribute__ ((section(".parameter_config_7"))) uint8_t u8_lock_mode_type_nums;
-/* extern const __attribute__ ((section(".parameter_config_9"))) uint16_t u16_lock_mode_address[5u]; */
 extern const __attribute__ ((section(".parameter_config_8"))) uint8_t u8_unlock_mode_type_nums;
-/* extern const __attribute__ ((section(".parameter_config_11"))) uint16_t u16_unlock_mode_address[5u]; */
 
 extern const __attribute__ ((section(".parameter_config_9"))) uint8_t u8_lock_mode1_animation[LOCK_MODE1_TOTAL_STEP][SIGNAL_ANIMATION_LED_NUMS];
 extern const __attribute__ ((section(".parameter_config_10"))) uint8_t u8_lock_mode2_animation[LOCK_MODE2_TOTAL_STEP][SIGNAL_ANIMATION_LED_NUMS];
@@ -276,184 +268,75 @@ extern const __attribute__ ((section(".parameter_config_16")))  uint8_t u8_unloc
 extern const __attribute__ ((section(".parameter_config_17")))  uint8_t u8_unlock_mode4_animation[UNLOCK_MODE4_TOTAL_STEP][SIGNAL_ANIMATION_LED_NUMS];
 extern const __attribute__ ((section(".parameter_config_18")))  uint8_t u8_unlock_mode5_animation[UNLOCK_MODE5_TOTAL_STEP][SIGNAL_ANIMATION_LED_NUMS];
 
-/* extern const __attribute__ ((section(".parameter_config_22"))) uint8_t *signal_animation_data[LOCK_UNLOCK_MAX_MODE_NUMS]; */
-/* Exported data declaration */
-
-/* Const memory section */
-/* Declaration for custom storage class: Const */
-extern const __attribute__ ((section(".parameter_config_19"))) uint8_t u8_cvcc_k_array[12][24];/* Referenced by:
-                                              * '<S19>/cvcc_current_duty_mode_assigment'
-                                              * '<S93>/cvcc_current_init_proc'
-                                              */
 /* 各恒流芯片每个通道输出电流值K系数 */
-extern const __attribute__ ((section(".parameter_config_20"))) uint8_t u8_drl_0_cvcc_map_array[2][2];/* Referenced by:
-                                                    * '<S19>/drl_0_map_array'
-                                                    * '<S92>/drl_0_map_array'
-                                                    * '<S93>/drl_0_map_array'
-                                                    */
-/* 恒流类型4输出通道
-   与TI互斥关闭，单独的DRL通道 */
-extern const __attribute__ ((section(".parameter_config_21"))) uint8_t u8_drl_0_cvcc_map_nums;/* Referenced by:
-                                             * '<S19>/drl_0_map_nums'
-                                             * '<S92>/drl_0_map_nums'
-                                             * '<S93>/drl_0_map_nums'
-                                             */
-extern const __attribute__ ((section(".parameter_config_22")))  uint8_t u8_drl_0_unlock_lock_offset;
+extern const __attribute__ ((section(".parameter_config_19"))) uint8_t u8_cvcc_k_array[12][24];
 
-/* 恒流类型4输出通道个数 */
-extern const __attribute__ ((section(".parameter_config_23"))) uint8_t u8_drl_1_cvcc_map_array[2][2];/* Referenced by:
-                                                    * '<S19>/drl_1_map_array'
-                                                    * '<S92>/drl_1_map_array'
-                                                    * '<S93>/drl_1_map_array'
-                                                    */
-/* 恒流类型6输出通道
-   与TI互斥降额，单独的DRL通道 */
-extern const __attribute__ ((section(".parameter_config_24"))) uint8_t u8_drl_1_cvcc_map_nums;/* Referenced by:
-                                             * '<S19>/drl_1_map_nums'
-                                             * '<S92>/drl_1_map_nums'
-                                             * '<S93>/drl_1_map_nums'
-                                             */
-extern const __attribute__ ((section(".parameter_config_25")))  uint8_t u8_drl_1_unlock_lock_offset;
+/* 恒流类型4输出通道: 与TI互斥关闭, 单独的DRL通道 */
+extern const __attribute__ ((section(".parameter_config_20"))) uint8_t u8_drl_0_cvcc_map_array[2][2];
+extern const __attribute__ ((section(".parameter_config_21"))) uint8_t u8_drl_0_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_22"))) uint8_t u8_drl_0_unlock_lock_offset;
 
-/* 恒流类型6输出通道个数 */
-extern const __attribute__ ((section(".parameter_config_26"))) uint8_t u8_drl_2_cvcc_map_array[2][2];/* Referenced by:
-                                                    * '<S19>/drl_2_map_array'
-                                                    * '<S92>/drl_2_map_array'
-                                                    * '<S93>/drl_2_map_array'
-                                                    */
-/* 恒流类型8输出通道
-   单独的DRL通道 */
-extern const __attribute__ ((section(".parameter_config_27"))) uint8_t u8_drl_2_cvcc_map_nums;/* Referenced by:
-                                             * '<S19>/drl_2_map_nums'
-                                             * '<S92>/drl_2_map_nums'
-                                             * '<S93>/drl_2_map_nums'
-                                             */
-extern const __attribute__ ((section(".parameter_config_28")))  uint8_t u8_drl_2_unlock_lock_offset;
+/* 恒流类型6输出通道:与TI互斥降额, 单独的DRL通道 */
+extern const __attribute__ ((section(".parameter_config_23"))) uint8_t u8_drl_1_cvcc_map_array[2][2];
+extern const __attribute__ ((section(".parameter_config_24"))) uint8_t u8_drl_1_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_25"))) uint8_t u8_drl_1_unlock_lock_offset;
 
-/* 恒流类型8输出通道个数 T2 */
-extern const __attribute__ ((section(".parameter_config_29"))) uint8_t u8_drl_pl_0_cvcc_map_array[20][2];/* Referenced by:
-                                                       * '<S19>/drl_pl_0_map_array'
-                                                       * '<S92>/drl_pl_0_map_array'
-                                                       * '<S93>/drl_pl_0_map_array'
-                                                       */
-/* 恒流类型3输出通道
-   与TI互斥关闭，DRL和PL共用通道 */
-extern const __attribute__ ((section(".parameter_config_30"))) uint8_t u8_drl_pl_0_cvcc_map_nums;/* Referenced by:
-                                                * '<S19>/drl_pl_0_map_nums'
-                                                * '<S92>/drl_pl_0_map_nums'
-                                                * '<S93>/drl_pl_0_map_nums'
-                                                */
-extern const __attribute__ ((section(".parameter_config_31")))  uint8_t u8_drl_pl_0_pl_duty;
-extern const __attribute__ ((section(".parameter_config_32")))  uint8_t u8_drl_pl_0_unlock_lock_offset;
+/* 恒流类型8输出通道: 单独的DRL通道 */
+extern const __attribute__ ((section(".parameter_config_26"))) uint8_t u8_drl_2_cvcc_map_array[2][2];
+extern const __attribute__ ((section(".parameter_config_27"))) uint8_t u8_drl_2_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_28"))) uint8_t u8_drl_2_unlock_lock_offset;
 
-/* 恒流类型3输出通道个数 T3 */
-extern const __attribute__ ((section(".parameter_config_33"))) uint8_t u8_drl_pl_1_cvcc_map_array[16][2];/* Referenced by:
-                                                       * '<S19>/drl_pl_1_map_array'
-                                                       * '<S92>/drl_pl_1_map_array'
-                                                       * '<S93>/drl_pl_1_map_array'
-                                                       */
-/* 恒流类型5输出通道
-   与TI互斥降额，DRL和PL共用通道。 */
-extern const __attribute__ ((section(".parameter_config_34"))) uint8_t u8_drl_pl_1_cvcc_map_nums;/* Referenced by:
-                                                * '<S19>/drl_pl_1_map_nums'
-                                                * '<S92>/drl_pl_1_map_nums'
-                                                * '<S93>/drl_pl_1_map_nums'
-                                                */
-extern const __attribute__ ((section(".parameter_config_35")))  uint8_t u8_drl_pl_1_pl_duty;
-extern const __attribute__ ((section(".parameter_config_36")))  uint8_t u8_drl_pl_1_unlock_lock_offset;
-/* 恒流类型5输出通道个数 */
-extern const __attribute__ ((section(".parameter_config_37"))) uint8_t u8_drl_pl_2_cvcc_map_array[2][2];/* Referenced by:
-                                                       * '<S19>/drl_pl_2_map_array'
-                                                       * '<S92>/drl_pl_2_map_array'
-                                                       * '<S93>/drl_pl_2_map_array'
-                                                       */
-/* 恒流类型7输出通道
-   单独的DRL和PL共用通道 */
-extern const __attribute__ ((section(".parameter_config_38"))) uint8_t u8_drl_pl_2_cvcc_map_nums;/* Referenced by:
-                                                * '<S19>/drl_pl_2_map_nums'
-                                                * '<S92>/drl_pl_2_map_nums'
-                                                * '<S93>/drl_pl_2_map_nums'
-                                                */
-extern const __attribute__ ((section(".parameter_config_39")))  uint8_t u8_drl_pl_2_pl_duty;
-extern const __attribute__ ((section(".parameter_config_40")))  uint8_t u8_drl_pl_2_unlock_lock_offset;
-/* 恒流类型7输出通道个数 */
-extern const __attribute__ ((section(".parameter_config_41"))) uint8_t u8_hb_adb_mode;  /* Referenced by: '<S5>/u8_hb_adb_mode' */
-/* 配置当前HB是否为ADB模式 */
-extern const __attribute__ ((section(".parameter_config_42"))) uint8_t u8_pl_0_cvcc_map_array[2][2];/* Referenced by:
-                                                   * '<S19>/pl_0_map_array'
-                                                   * '<S92>/pl_0_map_array'
-                                                   * '<S93>/pl_0_map_array'
-                                                   */
-/* 恒流类型9输出通道
-   单独的PL通道 */
-extern const __attribute__ ((section(".parameter_config_43"))) uint8_t u8_pl_0_cvcc_map_nums;/* Referenced by:
-                                            * '<S19>/pl_0_map_nums'
-                                            * '<S92>/pl_0_map_nums'
-                                            * '<S93>/pl_0_map_nums'
-                                            */
-extern const __attribute__ ((section(".parameter_config_44")))  uint8_t u8_pl_0_unlock_lock_offset;
+/* 恒流类型3输出通道: 与TI互斥关闭, DRL和PL共用通道 */
+extern const __attribute__ ((section(".parameter_config_29"))) uint8_t u8_drl_pl_0_cvcc_map_array[20][2];
+extern const __attribute__ ((section(".parameter_config_30"))) uint8_t u8_drl_pl_0_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_31"))) uint8_t u8_drl_pl_0_pl_duty;
+extern const __attribute__ ((section(".parameter_config_32"))) uint8_t u8_drl_pl_0_unlock_lock_offset;
 
-/* 恒流类型9输出通道个数 T8 */
-extern const __attribute__ ((section(".parameter_config_45"))) uint8_t u8_pl_cvcc_map_array[18][2];/* Referenced by:
-                                                 * '<S19>/pl_map_array'
-                                                 * '<S92>/pl_map_array'
-                                                 * '<S93>/pl_map_array'
-                                                 */
-/* 恒流类型9输出通道
-   单独的PL通道 */
-extern const __attribute__ ((section(".parameter_config_46"))) uint8_t u8_pl_cvcc_map_nums;/* Referenced by:
-                                          * '<S19>/pl_map_nums'
-                                          * '<S92>/pl_map_nums'
-                                          * '<S93>/pl_map_nums'
-                                          */
-extern const __attribute__ ((section(".parameter_config_47")))  uint8_t u8_pl_cvcc_current;
-extern const __attribute__ ((section(".parameter_config_48")))  uint8_t u8_pl_unlock_lock_offset;
-/* 恒流类型9输出通道个数 */
-extern const __attribute__ ((section(".parameter_config_49"))) uint8_t u8_pl_duty_cfg;   /* Referenced by: '<S1>/pl_duty_cfg' */
-extern const __attribute__ ((section(".parameter_config_50"))) uint8_t u8_ti_cvcc_map_array[40][2];/* Referenced by:
-                                                 * '<S19>/ti_channel'
-                                                 * '<S92>/ti_channel'
-                                                 * '<S93>/ti_channel'
-                                                 */
-/* 恒流类型1输出通道
-   单独的TI通道输出 T1 */
-extern const __attribute__ ((section(".parameter_config_51"))) uint8_t u8_ti_cvcc_map_nums;/* Referenced by:
-                                          * '<S19>/ti_nums'
-                                          * '<S92>/ti_nums'
-                                          * '<S93>/ti_nums'
-                                          */
-/* 恒流类型1输出通道个数 */
-extern const __attribute__ ((section(".parameter_config_52"))) uint8_t u8_ti_drl_pl_cvcc_map_array[2][2];/* Referenced by:
-                                                         * '<S19>/ti_drl_pl_channel'
-                                                         * '<S92>/ti_drl_pl_channel'
-                                                         * '<S923>/ti_drl_pl_channel'
-                                                         */
-/* 恒流类型2输出通道
-   TI/DRL/PL共用通道 */
-extern const __attribute__ ((section(".parameter_config_53"))) uint8_t u8_ti_drl_pl_cvcc_map_nums;/* Referenced by:
-                                      4           * '<S19>/ti_drl_pl_nums'
-                                                 * '<S92>/ti_drl_pl_nums'
-                                                 * '<S93>/ti_drl_pl_nums'
-                                                 */
-extern const __attribute__ ((section(".parameter_config_54")))  uint8_t u8_ti_drl_pl_unlock_lock_offset;
+/* 恒流类型5输出通道: 与TI互斥降额, DRL和PL共用通道。 */
+extern const __attribute__ ((section(".parameter_config_33"))) uint8_t u8_drl_pl_1_cvcc_map_array[16][2];
+extern const __attribute__ ((section(".parameter_config_34"))) uint8_t u8_drl_pl_1_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_35"))) uint8_t u8_drl_pl_1_pl_duty;
+extern const __attribute__ ((section(".parameter_config_36"))) uint8_t u8_drl_pl_1_unlock_lock_offset;
 
-extern const __attribute__ ((section(".parameter_config_55")))  uint8_t u8_adas_cvcc_map_array[16][2];
+/* 恒流类型7输出通道: 单独的DRL和PL共用通道 */
+extern const __attribute__ ((section(".parameter_config_37"))) uint8_t u8_drl_pl_2_cvcc_map_array[2][2];
+extern const __attribute__ ((section(".parameter_config_38"))) uint8_t u8_drl_pl_2_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_39"))) uint8_t u8_drl_pl_2_pl_duty;
+extern const __attribute__ ((section(".parameter_config_40"))) uint8_t u8_drl_pl_2_unlock_lock_offset;
 
-extern const __attribute__ ((section(".parameter_config_56")))  uint8_t u8_adas_cvcc_map_nums;
-extern const __attribute__ ((section(".parameter_config_57")))  uint8_t u8_adas_cvcc_current;
+extern const __attribute__ ((section(".parameter_config_41"))) uint8_t u8_hb_adb_mode; // 配置当前HB是否为ADB模式
 
-/* 恒流类型2输出通道个数 */
-/* Declaration for custom storage class: Const */
+/* 恒流类型9输出通道: 单独的PL通道 */
+extern const __attribute__ ((section(".parameter_config_42"))) uint8_t u8_pl_0_cvcc_map_array[2][2];
+extern const __attribute__ ((section(".parameter_config_43"))) uint8_t u8_pl_0_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_44"))) uint8_t u8_pl_0_unlock_lock_offset;
+
+/* 恒流类型9输出通道: 单独的PL通道 */
+extern const __attribute__ ((section(".parameter_config_45"))) uint8_t u8_pl_cvcc_map_array[18][2];
+extern const __attribute__ ((section(".parameter_config_46"))) uint8_t u8_pl_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_47"))) uint8_t u8_pl_cvcc_current;
+extern const __attribute__ ((section(".parameter_config_48"))) uint8_t u8_pl_unlock_lock_offset;
+extern const __attribute__ ((section(".parameter_config_49"))) uint8_t u8_pl_duty_cfg;
+
+/* 恒流类型1输出通道: 单独的TI通道输出 T1 */
+extern const __attribute__ ((section(".parameter_config_50"))) uint8_t u8_ti_cvcc_map_array[40][2];
+extern const __attribute__ ((section(".parameter_config_51"))) uint8_t u8_ti_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_52"))) uint8_t u8_ti_drl_pl_cvcc_map_array[2][2];
+
+/* 恒流类型2输出通道: TI/DRL/PL共用通道 */
+extern const __attribute__ ((section(".parameter_config_53"))) uint8_t u8_ti_drl_pl_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_54"))) uint8_t u8_ti_drl_pl_unlock_lock_offset;
+
+extern const __attribute__ ((section(".parameter_config_55"))) uint8_t u8_adas_cvcc_map_array[16][2];
+extern const __attribute__ ((section(".parameter_config_56"))) uint8_t u8_adas_cvcc_map_nums;
+extern const __attribute__ ((section(".parameter_config_57"))) uint8_t u8_adas_cvcc_current;
+
 extern const __attribute__ ((section(".parameter_config_58"))) uint8_t u8_ti_drl_current_method;
-                            /* Referenced by: '<S1>/u8_ti_drl_current_method' */
 
 /* 信号灯电流输出方式：
    1. 实时更新电流值（0）。
    2. 只上电更新一次电流，基础电流固定设置为ti或者drl。 */
-
-/* Const memory section */
-/* Declaration for custom storage class: Const */
-extern const __attribute__ ((section(".parameter_config_59"))) uint8_t u8_drl_ntc_default_derate;/* Referenced by: '<S4>/Constant2' */
+extern const __attribute__ ((section(".parameter_config_59"))) uint8_t u8_drl_ntc_default_derate;
 
 typedef struct 
 {

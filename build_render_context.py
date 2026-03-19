@@ -57,6 +57,9 @@ CVCC_OUTPUT_VOLTAGE_CONFIGS = (
 )
 CVCC_CFG_IC_ADDR_INDEXES = tuple(range(12))
 CVCC_CFG_UNUSED_IC_ADDR = 255
+ANIMATION_CFG_KIND_NAMES = ("lock", "unlock")
+ANIMATION_CFG_MAX_MODE_COUNT = 5
+ANIMATION_CFG_MODE_NAME_PATTERN = re.compile(r"\bmode\s*(\d+)\b", re.IGNORECASE)
 CVCC_IC_TYPE_SYMBOL_TO_MACRO = {
     "CVCC_IC_TYPE_TPS929120": "CVCC_TPS929120",
     "CVCC_IC_TYPE_TPS929160": "CVCC_TPS929160",
@@ -466,6 +469,91 @@ def build_cvcc_output_voltage_placeholders(
     return placeholders
 
 
+def load_animation_cfg_source(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    payload = require_excel_payload(excel_payloads, "Animation_Cfg", purpose="生成动画模式步数占位符")
+    other_animations = payload.get("other_animations", [])
+    if other_animations:
+        raise ValueError("Animation_Cfg 存在非 lock/unlock 动画模式，当前模板暂不支持。")
+    return payload
+
+
+def parse_animation_cfg_mode_index(mode_name: Any) -> int:
+    if not isinstance(mode_name, str):
+        raise ValueError("Animation_Cfg.mode_name 必须是字符串。")
+
+    match = ANIMATION_CFG_MODE_NAME_PATTERN.search(mode_name)
+    if match is None:
+        raise ValueError(f"Animation_Cfg 中无法从模式名解析 mode 序号: {mode_name!r}")
+
+    mode_index = int(match.group(1))
+    if not 1 <= mode_index <= ANIMATION_CFG_MAX_MODE_COUNT:
+        raise ValueError(
+            f"Animation_Cfg 模式序号超出范围 1..{ANIMATION_CFG_MAX_MODE_COUNT}: {mode_name!r}"
+        )
+    return mode_index
+
+
+def build_animation_cfg_domain(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    payload = load_animation_cfg_source(excel_payloads)
+    domain: dict[str, Any] = {}
+
+    for kind_name in ANIMATION_CFG_KIND_NAMES:
+        animations = payload.get(f"{kind_name}_animations")
+        if not isinstance(animations, list):
+            raise ValueError(f"Animation_Cfg.json 缺少 {kind_name}_animations，无法生成动画步数占位符。")
+
+        mode_steps = [0] * ANIMATION_CFG_MAX_MODE_COUNT
+        seen_modes: set[int] = set()
+        for animation in animations:
+            if not isinstance(animation, dict):
+                raise ValueError(f"Animation_Cfg.{kind_name}_animations 存在无效模式项。")
+
+            mode_index = parse_animation_cfg_mode_index(animation.get("mode_name"))
+            if mode_index in seen_modes:
+                raise ValueError(f"Animation_Cfg.{kind_name}_animations 存在重复模式 mode{mode_index}。")
+
+            frames = animation.get("frames")
+            if not isinstance(frames, list):
+                raise ValueError(f"Animation_Cfg.{kind_name}_animations.mode{mode_index} 缺少 frames。")
+
+            seen_modes.add(mode_index)
+            mode_steps[mode_index - 1] = len(frames)
+
+        domain[kind_name] = {
+            "mode_count": len(seen_modes),
+            "mode_steps": mode_steps,
+        }
+
+    return domain
+
+
+def build_animation_cfg_placeholders(
+    animation_cfg_domain: dict[str, Any],
+    required_placeholders: set[str],
+) -> dict[str, int]:
+    animation_placeholder_required = any(
+        (name.startswith("LOCK_MODE") or name.startswith("UNLOCK_MODE")) and name.endswith("_TOTAL_STEP")
+        for name in required_placeholders
+    )
+    if not animation_placeholder_required:
+        return {}
+
+    placeholders: dict[str, int] = {}
+    for kind_name in ANIMATION_CFG_KIND_NAMES:
+        kind_domain = animation_cfg_domain.get(kind_name)
+        if not isinstance(kind_domain, dict):
+            raise ValueError(f"animation_cfg 缺少 {kind_name} 配置。")
+
+        mode_steps = kind_domain.get("mode_steps")
+        if not isinstance(mode_steps, list) or len(mode_steps) != ANIMATION_CFG_MAX_MODE_COUNT:
+            raise ValueError(f"animation_cfg.{kind_name}.mode_steps 配置无效。")
+
+        for mode_index, total_steps in enumerate(mode_steps, start=1):
+            placeholders[f"{kind_name.upper()}_MODE{mode_index}_TOTAL_STEP"] = int(total_steps)
+
+    return placeholders
+
+
 def coerce_chcm_cfg_word(value: Any) -> int | None:
     if value is None:
         return 0
@@ -790,7 +878,9 @@ def build_render_context(
     placeholders = {**SCALAR_DEFAULTS, **extract_scalar_placeholders(kconfig_payload, excel_payloads)}
     sections: dict[str, str] = {}
     cvcc_cfg = build_cvcc_cfg_domain(excel_payloads, kconfig_payload)
+    animation_cfg = build_animation_cfg_domain(excel_payloads)
     placeholders.update(build_cvcc_cfg_placeholders(cvcc_cfg, required_placeholders))
+    placeholders.update(build_animation_cfg_placeholders(animation_cfg, required_placeholders))
     placeholders.update(build_cvcc_output_voltage_placeholders(kconfig_payload, required_placeholders))
     placeholders.update(build_chcm_cfg_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_motor_placeholders(excel_payloads, required_placeholders))
@@ -807,6 +897,7 @@ def build_render_context(
         "placeholders": placeholders,
         "sections": sections,
         "cvcc_cfg": cvcc_cfg,
+        "animation_cfg": animation_cfg,
         "excel": excel_payloads,
         "kconfig": kconfig_payload,
     }
