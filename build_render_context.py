@@ -151,6 +151,44 @@ MOTOR_RUN_FIELD_KEYS = (
 MOTOR_DC_LEVEL_CFG_ID = 17
 
 
+def build_signal_animation_channel_layout() -> tuple[tuple[str, str], ...]:
+    layout: list[tuple[str, str]] = []
+
+    layout.extend(
+        (f"IC10-CH{channel:02d}", f"DRL_POS_{label}")
+        for channel, label in zip(range(4, -1, -1), range(16, 11, -1))
+    )
+    layout.extend(
+        (f"IC1-CH{channel:02d}", f"DRL_POS_{label}")
+        for channel, label in zip(range(5, -1, -1), range(11, 5, -1))
+    )
+    layout.extend(
+        (f"IC0-CH{channel:02d}", f"DRL_POS_{label}")
+        for channel, label in zip(range(4, -1, -1), range(5, 0, -1))
+    )
+
+    label = 20
+    for ic_index in range(6, 1, -1):
+        for channel in range(11, 7, -1):
+            layout.append((f"IC{ic_index}-CH{channel:02d}", f"DRL_POS_{label}"))
+            label -= 1
+
+    label = 1
+    for ic_index in (7, 8):
+        for channel in range(9):
+            layout.append((f"IC{ic_index}-CH{channel:02d}", f"GRILL_POS_{label}"))
+            label += 1
+
+    return tuple(layout)
+
+
+SIGNAL_ANIMATION_CHANNEL_LAYOUT = build_signal_animation_channel_layout()
+SIGNAL_ANIMATION_CHANNEL_INDEX = {
+    channel_name: index for index, (channel_name, _label) in enumerate(SIGNAL_ANIMATION_CHANNEL_LAYOUT)
+}
+SIGNAL_ANIMATION_HEADER = " ".join(label for _channel_name, label in SIGNAL_ANIMATION_CHANNEL_LAYOUT)
+
+
 def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -554,6 +592,215 @@ def build_animation_cfg_placeholders(
     return placeholders
 
 
+def load_e01_ads_animation_payload(
+    excel_payloads: dict[str, dict[str, Any]],
+    sheet_name: str,
+    *,
+    purpose: str,
+) -> dict[str, Any]:
+    payload = require_excel_payload(excel_payloads, sheet_name, purpose=purpose)
+    columns = payload.get("columns")
+    frames = payload.get("frames")
+    if not isinstance(columns, list) or not isinstance(frames, list):
+        raise ValueError(f"{sheet_name}.json 缺少 columns/frames，无法{purpose}。")
+    return payload
+
+
+def normalize_e01_ads_animation_label(column_payload: dict[str, Any]) -> str:
+    output_name = column_payload.get("output_name")
+    if isinstance(output_name, str) and output_name.strip():
+        compact = output_name.replace("\r\n", "\n").replace("\n", ":")
+        if ":" in compact:
+            compact = compact.split(":")[-1]
+        compact = compact.strip()
+        if compact:
+            return compact
+
+    led_name = column_payload.get("led_name")
+    if isinstance(led_name, str) and led_name.strip():
+        return led_name.strip()
+    return f"COL{int(column_payload.get('column_id', 0))}"
+
+
+def format_e01_ads_animation_header(columns: list[dict[str, Any]]) -> str:
+    return " ".join(normalize_e01_ads_animation_label(column_payload) for column_payload in columns)
+
+
+def format_signal_animation_rows(row_frames: list[tuple[list[int], int]]) -> str:
+    value_width = 0
+    time_width = 0
+
+    lines: list[str] = []
+    for values, time_ms in row_frames:
+        for value in values:
+            value_width = max(value_width, len(f"{value}U"))
+        time_width = max(time_width, len(str(time_ms)))
+
+    for values, time_ms in row_frames:
+        formatted_values = [f"{value}U".ljust(value_width) for value in values]
+        lines.append(
+            f"    {{ {', '.join(formatted_values)} }}, /**< {time_ms:>{time_width}}ms */"
+        )
+
+    return "\n".join(lines)
+
+
+def format_e01_ads_animation_rows(frames: list[dict[str, Any]], column_count: int) -> str:
+    normalized_frames: list[tuple[list[int], int]] = []
+
+    for frame in frames:
+        values = frame.get("values")
+        if not isinstance(values, list) or len(values) != column_count:
+            raise ValueError("E01 ADS 原始动画帧列数无效，无法生成 C 数组。")
+
+        normalized_values: list[int] = []
+        for value in values:
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError("E01 ADS 原始动画存在非整数像素值，无法生成 C 数组。")
+            normalized_values.append(value)
+
+        time_ms = frame.get("time_ms")
+        if isinstance(time_ms, bool) or not isinstance(time_ms, int):
+            raise ValueError("E01 ADS 原始动画存在无效 time_ms，无法生成 C 数组。")
+
+        normalized_frames.append((normalized_values, time_ms))
+
+    return format_signal_animation_rows(normalized_frames)
+
+
+def format_animation_cfg_rows(frames: list[dict[str, Any]]) -> str:
+    normalized_frames: list[tuple[list[int], int]] = []
+
+    for frame in frames:
+        channels = frame.get("channels")
+        if not isinstance(channels, dict):
+            raise ValueError("Animation_Cfg 动画帧缺少 channels，无法生成 C 数组。")
+
+        values = [0] * len(SIGNAL_ANIMATION_CHANNEL_LAYOUT)
+        for channel_name, value in channels.items():
+            if not isinstance(channel_name, str):
+                raise ValueError("Animation_Cfg 动画帧存在非字符串通道名，无法生成 C 数组。")
+            if channel_name not in SIGNAL_ANIMATION_CHANNEL_INDEX:
+                raise ValueError(f"Animation_Cfg 动画帧存在未知通道 {channel_name!r}。")
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError(f"Animation_Cfg 动画帧通道 {channel_name!r} 存在非整数亮度值。")
+            values[SIGNAL_ANIMATION_CHANNEL_INDEX[channel_name]] = value
+
+        time_ms = frame.get("time_ms")
+        if isinstance(time_ms, bool) or not isinstance(time_ms, int):
+            raise ValueError("Animation_Cfg 动画帧存在无效 time_ms，无法生成 C 数组。")
+
+        normalized_frames.append((values, time_ms))
+
+    return format_signal_animation_rows(normalized_frames)
+
+
+def build_animation_cfg_mode_body(animation: dict[str, Any]) -> str:
+    frames = animation.get("frames")
+    if not isinstance(frames, list):
+        raise ValueError("Animation_Cfg 动画模式缺少 frames，无法生成 C 数组。")
+    if not frames:
+        return ""
+    return f"/**<  {SIGNAL_ANIMATION_HEADER} */\n{format_animation_cfg_rows(frames)}"
+
+
+def build_animation_cfg_mode_data_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+) -> dict[str, str]:
+    needed_placeholders = {
+        f"{kind_name.upper()}_MODE{mode_index}_ANIMATION_BODY"
+        for kind_name in ANIMATION_CFG_KIND_NAMES
+        for mode_index in range(2, ANIMATION_CFG_MAX_MODE_COUNT + 1)
+    }
+    if not any(name in needed_placeholders for name in required_placeholders):
+        return {}
+
+    payload = load_animation_cfg_source(excel_payloads)
+    placeholders: dict[str, str] = {}
+
+    for kind_name in ANIMATION_CFG_KIND_NAMES:
+        animations = payload.get(f"{kind_name}_animations")
+        if not isinstance(animations, list):
+            raise ValueError(f"Animation_Cfg.json 缺少 {kind_name}_animations，无法生成动画数组占位符。")
+
+        mode_to_animation: dict[int, dict[str, Any]] = {}
+        for animation in animations:
+            if not isinstance(animation, dict):
+                raise ValueError(f"Animation_Cfg.{kind_name}_animations 存在无效模式项。")
+            mode_index = parse_animation_cfg_mode_index(animation.get("mode_name"))
+            if mode_index in mode_to_animation:
+                raise ValueError(f"Animation_Cfg.{kind_name}_animations 存在重复模式 mode{mode_index}。")
+            mode_to_animation[mode_index] = animation
+
+        for mode_index in range(2, ANIMATION_CFG_MAX_MODE_COUNT + 1):
+            placeholder_name = f"{kind_name.upper()}_MODE{mode_index}_ANIMATION_BODY"
+            if placeholder_name not in required_placeholders:
+                continue
+
+            animation = mode_to_animation.get(mode_index)
+            placeholders[placeholder_name] = "" if animation is None else build_animation_cfg_mode_body(animation)
+
+    return placeholders
+
+
+def build_e01_ads_mode1_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    animation_cfg_domain: dict[str, Any],
+    required_placeholders: set[str],
+    *,
+    animation_kind: str,
+    sheet_name: str,
+    header_placeholder: str,
+    rows_placeholder: str,
+) -> dict[str, str]:
+    placeholder_required = any(
+        name in {header_placeholder, rows_placeholder} for name in required_placeholders
+    )
+    if not placeholder_required:
+        return {}
+
+    payload = load_e01_ads_animation_payload(
+        excel_payloads,
+        sheet_name,
+        purpose=f"生成 {animation_kind.upper()} MODE1 动画占位符",
+    )
+    columns = payload["columns"]
+    frames = payload["frames"]
+    column_count = payload.get("column_count")
+    if isinstance(column_count, bool) or not isinstance(column_count, int):
+        raise ValueError(f"{sheet_name}.json 缺少有效的 column_count。")
+    if len(columns) != column_count:
+        raise ValueError(f"{sheet_name}.json 的 column_count 与 columns 长度不一致。")
+
+    mode_domain = animation_cfg_domain.get(animation_kind)
+    if not isinstance(mode_domain, dict):
+        raise ValueError(
+            f"animation_cfg 缺少 {animation_kind} 配置，无法生成 {animation_kind.upper()} MODE1 动画。"
+        )
+    mode_steps = mode_domain.get("mode_steps")
+    if not isinstance(mode_steps, list) or not mode_steps:
+        raise ValueError(
+            f"animation_cfg.{animation_kind}.mode_steps 配置无效，无法生成 {animation_kind.upper()} MODE1 动画。"
+        )
+    expected_frame_count = mode_steps[0]
+    if isinstance(expected_frame_count, bool) or not isinstance(expected_frame_count, int):
+        raise ValueError(
+            f"animation_cfg.{animation_kind}.mode_steps[0] 配置无效，无法生成 {animation_kind.upper()} MODE1 动画。"
+        )
+    if len(frames) != expected_frame_count:
+        raise ValueError(
+            f"{sheet_name} 原始帧数 {len(frames)} 与 {animation_kind.upper()}_MODE1_TOTAL_STEP {expected_frame_count} 不一致。"
+        )
+
+    placeholders: dict[str, str] = {}
+    if header_placeholder in required_placeholders:
+        placeholders[header_placeholder] = format_e01_ads_animation_header(columns)
+    if rows_placeholder in required_placeholders:
+        placeholders[rows_placeholder] = format_e01_ads_animation_rows(frames, column_count)
+    return placeholders
+
+
 def coerce_chcm_cfg_word(value: Any) -> int | None:
     if value is None:
         return 0
@@ -881,6 +1128,29 @@ def build_render_context(
     animation_cfg = build_animation_cfg_domain(excel_payloads)
     placeholders.update(build_cvcc_cfg_placeholders(cvcc_cfg, required_placeholders))
     placeholders.update(build_animation_cfg_placeholders(animation_cfg, required_placeholders))
+    placeholders.update(
+        build_e01_ads_mode1_placeholders(
+            excel_payloads,
+            animation_cfg,
+            required_placeholders,
+            animation_kind="lock",
+            sheet_name="E01 ADS Lock",
+            header_placeholder="LOCK_MODE1_ANIMATION_HEADER",
+            rows_placeholder="LOCK_MODE1_ANIMATION_ROWS",
+        )
+    )
+    placeholders.update(
+        build_e01_ads_mode1_placeholders(
+            excel_payloads,
+            animation_cfg,
+            required_placeholders,
+            animation_kind="unlock",
+            sheet_name="E01 ADS Unlock",
+            header_placeholder="UNLOCK_MODE1_ANIMATION_HEADER",
+            rows_placeholder="UNLOCK_MODE1_ANIMATION_ROWS",
+        )
+    )
+    placeholders.update(build_animation_cfg_mode_data_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_cvcc_output_voltage_placeholders(kconfig_payload, required_placeholders))
     placeholders.update(build_chcm_cfg_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_motor_placeholders(excel_payloads, required_placeholders))

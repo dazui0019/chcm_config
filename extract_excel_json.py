@@ -47,6 +47,8 @@ SUPPORTED_SHEET_NAMES = (
     "HCM_PriLIN_Matrix",
     "CH_Cfg",
     "Animation_Cfg",
+    "E01 ADS Lock",
+    "E01 ADS Unlock",
     "current_config",
     "Motor_Cfg",
     "TI_sequential",
@@ -652,6 +654,113 @@ def parse_ti_sequential(worksheet: Worksheet) -> dict[str, Any]:
     }
 
 
+def find_e01_ads_left_table_columns(worksheet: Worksheet) -> list[dict[str, Any]]:
+    section_row_index = 3
+    mapping_row_index = 4
+    output_row_index = 5
+    led_row_index = 6
+
+    first_r_label_column = next(
+        (
+            column_index
+            for column_index in range(1, worksheet.max_column + 1)
+            if (normalize_text(worksheet.cell(section_row_index, column_index).value) or "").endswith("_R")
+        ),
+        None,
+    )
+    if first_r_label_column is None:
+        raise ValueError(f"{worksheet.title.strip()} 中未找到 `_R` 区域，无法定位表格左侧动画区域。")
+
+    first_l_label_column = next(
+        (
+            column_index
+            for column_index in range(first_r_label_column, worksheet.max_column + 1)
+            if (normalize_text(worksheet.cell(section_row_index, column_index).value) or "").endswith("_L")
+        ),
+        None,
+    )
+    last_left_table_column = (first_l_label_column - 1) if first_l_label_column is not None else worksheet.max_column
+
+    columns: list[dict[str, Any]] = []
+    current_section_name: str | None = None
+    current_mapping_name: str | None = None
+    for column_index in range(first_r_label_column, last_left_table_column + 1):
+        section_name = normalize_text(worksheet.cell(section_row_index, column_index).value)
+        if section_name is not None:
+            current_section_name = section_name
+
+        mapping_name = normalize_text(worksheet.cell(mapping_row_index, column_index).value)
+        if mapping_name is not None:
+            current_mapping_name = mapping_name
+
+        output_name = normalize_text(worksheet.cell(output_row_index, column_index).value)
+        led_name = normalize_text(worksheet.cell(led_row_index, column_index).value)
+        if output_name is None and led_name is None:
+            continue
+
+        columns.append(
+            {
+                "column_id": len(columns),
+                "source_column": column_index,
+                "section_name": current_section_name,
+                "mapping_name": current_mapping_name,
+                "output_name": output_name,
+                "led_name": led_name,
+            }
+        )
+
+    if not columns:
+        raise ValueError(f"{worksheet.title.strip()} 表格左侧动画区域没有可用输出列。")
+    return columns
+
+
+def parse_e01_ads_animation(worksheet: Worksheet) -> dict[str, Any]:
+    time_column_index = 3
+    frame_start_row_index = 7
+    columns = find_e01_ads_left_table_columns(worksheet)
+
+    frames: list[dict[str, Any]] = []
+    for row_index in range(frame_start_row_index, worksheet.max_row + 1):
+        time_ms = normalize_json_scalar(worksheet.cell(row_index, time_column_index).value)
+        values = [
+            0 if value is None else value
+            for value in (
+                normalize_json_scalar(worksheet.cell(row_index, column["source_column"]).value)
+                for column in columns
+            )
+        ]
+
+        if time_ms is None and not any(values):
+            continue
+        if time_ms is None:
+            raise ValueError(f"{worksheet.title.strip()} 第 {row_index} 行缺少时间值，无法按帧提取。")
+
+        frames.append(
+            {
+                "frame_id": len(frames),
+                "source_row": row_index,
+                "time_ms": time_ms,
+                "values": values,
+            }
+        )
+
+    if not frames:
+        raise ValueError(f"{worksheet.title.strip()} 中未找到动画帧。")
+
+    return {
+        "parser": "e01_ads_animation",
+        "sheet_name_raw": worksheet.title,
+        "sheet_name": worksheet.title.strip(),
+        "table_side": "left",
+        "led_side": "right",
+        "time_column": time_column_index,
+        "column_count": len(columns),
+        "frame_count": len(frames),
+        "columns": columns,
+        "frames": frames,
+    }
+
+
 def parse_current_config_function(
     worksheet: Worksheet,
     value_worksheet: Worksheet,
@@ -1131,6 +1240,33 @@ def condense_animation_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def condense_e01_ads_animation(parsed: dict[str, Any]) -> dict[str, Any]:
+    return with_output_schema({
+        "sheet_name": parsed["sheet_name"],
+        "table_side": parsed["table_side"],
+        "led_side": parsed["led_side"],
+        "column_count": parsed["column_count"],
+        "frame_count": parsed["frame_count"],
+        "columns": [
+            {
+                "column_id": column["column_id"],
+                "section_name": column["section_name"],
+                "mapping_name": column["mapping_name"],
+                "output_name": column["output_name"],
+                "led_name": column["led_name"],
+            }
+            for column in parsed["columns"]
+        ],
+        "frames": [
+            {
+                "time_ms": frame["time_ms"],
+                "values": frame["values"],
+            }
+            for frame in parsed["frames"]
+        ],
+    })
+
+
 def condense_ti_sequential(parsed: dict[str, Any]) -> dict[str, Any]:
     return with_output_schema({
         "sheet_name": parsed["sheet_name"],
@@ -1237,6 +1373,10 @@ def parse_sheet(worksheet: Worksheet, value_worksheet: Worksheet | None = None) 
         return parse_ch_cfg(worksheet)
     if sheet_name == "Animation_Cfg":
         return parse_animation_cfg(worksheet)
+    if sheet_name == "E01 ADS Lock":
+        return parse_e01_ads_animation(worksheet)
+    if sheet_name == "E01 ADS Unlock":
+        return parse_e01_ads_animation(worksheet)
     if sheet_name == "current_config":
         return parse_current_config(worksheet, value_worksheet or worksheet)
     if sheet_name == "TI_sequential":
@@ -1254,6 +1394,8 @@ def condense_sheet(parsed: dict[str, Any]) -> dict[str, Any]:
         return condense_ch_cfg(parsed)
     if parser_name == "animation_cfg":
         return condense_animation_cfg(parsed)
+    if parser_name == "e01_ads_animation":
+        return condense_e01_ads_animation(parsed)
     if parser_name == "current_config":
         return condense_current_config(parsed)
     if parser_name == "ti_sequential":
@@ -1309,6 +1451,8 @@ def find_supported_sheets(workbook) -> list[Worksheet]:
 def count_output_items(output_payload: dict[str, Any]) -> int:
     if "items" in output_payload:
         return len(output_payload["items"])
+    if "frames" in output_payload:
+        return len(output_payload["frames"])
     if "unlock_animations" in output_payload or "lock_animations" in output_payload:
         return sum(
             len(animation.get("frames", []))
