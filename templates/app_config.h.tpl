@@ -47,6 +47,7 @@ typedef uint8_t CVCC_TYPE_T;
 #define USED_MATRIX_LED_NUMS     ( 32U )
 #endif
 #define USED_CVCC_CHIP_NUMS      ( @USED_CVCC_CHIP_NUMS@U )
+#define USED_CVCC_CHANNEL_NUMS   ( @USED_CVCC_CHANNEL_NUMS@U )
 
 #define SUB_UARTCAN_0  ( 0U )
 #define SUB_UARTCAN_1  ( 1U )
@@ -269,7 +270,7 @@ extern const __attribute__ ((section(".parameter_config_17")))  uint8_t u8_unloc
 extern const __attribute__ ((section(".parameter_config_18")))  uint8_t u8_unlock_mode5_animation[UNLOCK_MODE5_TOTAL_STEP][SIGNAL_ANIMATION_LED_NUMS];
 
 /* 各恒流芯片每个通道输出电流值K系数 */
-extern const __attribute__ ((section(".parameter_config_19"))) uint8_t u8_cvcc_k_array[12][24];
+extern const __attribute__ ((section(".parameter_config_19"))) uint8_t u8_cvcc_k_array[USED_CVCC_CHIP_NUMS][USED_CVCC_CHANNEL_NUMS];
 
 /* 恒流类型4输出通道: 与TI互斥关闭, 单独的DRL通道 */
 extern const __attribute__ ((section(".parameter_config_20"))) uint8_t u8_drl_0_cvcc_map_array[2][2];

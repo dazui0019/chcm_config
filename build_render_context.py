@@ -57,6 +57,8 @@ CVCC_OUTPUT_VOLTAGE_CONFIGS = (
 )
 CVCC_CFG_IC_ADDR_INDEXES = tuple(range(12))
 CVCC_CFG_UNUSED_IC_ADDR = 255
+CVCC_K_ARRAY_FIXED_IC_COUNT = 12
+CVCC_K_ARRAY_FIXED_CHANNEL_COUNT = 24
 ANIMATION_CFG_KIND_NAMES = ("lock", "unlock")
 ANIMATION_CFG_MAX_MODE_COUNT = 5
 RAW_SIGNAL_ANIMATION_SHEET_PATTERN = re.compile(r"^(lock|unlock)\s+mode\s*(\d+)$", re.IGNORECASE)
@@ -306,7 +308,9 @@ def format_cvcc_cfg_switch_mask_value(value: int) -> str:
     return f"0x{value:08x}"
 
 
-def load_cvcc_cfg_excel_sources(excel_payloads: dict[str, dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+def load_cvcc_cfg_excel_sources(
+    excel_payloads: dict[str, dict[str, Any]]
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
     ch_cfg_payload = require_excel_payload(excel_payloads, "CH_Cfg", purpose="生成 CVCC 配置占位符")
     ics = ch_cfg_payload.get("ics")
     if not isinstance(ics, dict):
@@ -349,6 +353,48 @@ def resolve_cvcc_cfg_ic_max_current(
     return next(iter(max_currents))
 
 
+def coerce_cvcc_k_array_value(value: Any, channel_key: str) -> int:
+    if value is None:
+        return 100
+    if isinstance(value, bool):
+        raise ValueError(f"{channel_key}.primary_function.dimming_coefficient 不能是布尔值。")
+    if isinstance(value, int):
+        result = value
+    elif isinstance(value, float):
+        result = math.floor(value + 0.5)
+    else:
+        raise ValueError(f"{channel_key}.primary_function.dimming_coefficient 必须是数值。")
+
+    if not 0 <= result <= 255:
+        raise ValueError(f"{channel_key}.primary_function.dimming_coefficient 超出 uint8_t 范围: {result}")
+    return result
+
+
+def resolve_cvcc_k_array_channel_value(
+    channel_key: str,
+    current_channels: dict[str, dict[str, Any]],
+) -> int:
+    channel_payload = current_channels.get(channel_key)
+    if not isinstance(channel_payload, dict):
+        return 100
+
+    primary_function = channel_payload.get("primary_function")
+    if not isinstance(primary_function, dict):
+        return 100
+    return coerce_cvcc_k_array_value(primary_function.get("dimming_coefficient"), channel_key)
+
+
+def format_cvcc_k_array_rows(rows: list[list[int]]) -> str:
+    value_width = max((len(f"{value}U") for row in rows for value in row), default=len("100U"))
+    lines: list[str] = []
+    for row in rows:
+        formatted_values = [f"{value}U".ljust(value_width) for value in row]
+        lines.append(f"    {{ {', '.join(formatted_values)} }}, ")
+    if lines:
+        lines[-1] = lines[-1].removesuffix(", ")
+    return "\n".join(lines)
+
+
 def build_cvcc_cfg_domain(
     excel_payloads: dict[str, dict[str, Any]],
     kconfig_payload: dict[str, Any],
@@ -378,6 +424,14 @@ def build_cvcc_cfg_domain(
             "max_current": max_current,
         }
 
+    k_array_rows: list[list[int]] = []
+    for ic_index in range(CVCC_K_ARRAY_FIXED_IC_COUNT):
+        row: list[int] = []
+        for channel_index in range(CVCC_K_ARRAY_FIXED_CHANNEL_COUNT):
+            channel_key = f"IC{ic_index}-CH{channel_index:02d}"
+            row.append(resolve_cvcc_k_array_channel_value(channel_key, current_channels))
+        k_array_rows.append(row)
+
     return {
         "ic_type": resolve_kconfig_choice_macro(
             symbols,
@@ -390,6 +444,7 @@ def build_cvcc_cfg_domain(
             "Kconfig 中未选择 CVCC UART Channel，无法生成 CVCC 配置。",
         ),
         "ics": cvcc_cfg_ics,
+        "k_array_rows": k_array_rows,
     }
 
 
@@ -398,7 +453,12 @@ def build_cvcc_cfg_placeholders(
     required_placeholders: set[str],
 ) -> dict[str, str]:
     cvcc_placeholder_required = any(
-        name in {"CVCC_IC_TYPE", "CVCC_UART_CHANNEL"}
+        name in {
+            "CVCC_IC_TYPE",
+            "CVCC_UART_CHANNEL",
+            "USED_CVCC_CHANNEL_NUMS",
+            "CVCC_K_ARRAY_ROWS",
+        }
         or (name.startswith("CVCC_CFG_IC") and (
             name.endswith("_ADDR")
             or name.endswith("_USED_SWITCH")
@@ -415,6 +475,13 @@ def build_cvcc_cfg_placeholders(
         placeholders["CVCC_IC_TYPE"] = str(cvcc_cfg_domain["ic_type"])
     if "CVCC_UART_CHANNEL" in required_placeholders:
         placeholders["CVCC_UART_CHANNEL"] = str(cvcc_cfg_domain["uart_channel"])
+    if "USED_CVCC_CHANNEL_NUMS" in required_placeholders:
+        placeholders["USED_CVCC_CHANNEL_NUMS"] = str(CVCC_K_ARRAY_FIXED_CHANNEL_COUNT)
+    if "CVCC_K_ARRAY_ROWS" in required_placeholders:
+        k_array_rows = cvcc_cfg_domain.get("k_array_rows")
+        if not isinstance(k_array_rows, list):
+            raise ValueError("cvcc_cfg 缺少 k_array_rows，无法生成占位符。")
+        placeholders["CVCC_K_ARRAY_ROWS"] = format_cvcc_k_array_rows(k_array_rows)
 
     cvcc_cfg_ics = cvcc_cfg_domain.get("ics")
     if not isinstance(cvcc_cfg_ics, dict):

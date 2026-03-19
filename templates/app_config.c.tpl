@@ -336,21 +336,12 @@ const __attribute__ ((used,used,section(".parameter_config_22")))  uint8_t *sign
 };
 #endif
 /* HB作为矩阵输出，HB的通道3(buck2ch2)绑定的矩阵芯片各个switch的基础占空比值 */
-const __attribute__ ((used,used,section(".parameter_config_19")))  uint8_t u8_cvcc_k_array[12][24] = { 
-    { 114U, 114U, 114U, 114U, 114U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U }, 
-    { 114U, 114U, 114U, 114U, 114U, 114U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U }, 
-    { 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U }, 
-    { 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U }, 
-    { 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U }, 
-    { 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U }, 
-    { 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U },
-    { 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U },
-    { 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U },
-    { 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U },
-    { 114U, 114U, 114U, 114U, 114U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U },
-    { 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U }
-};
+
 /* 各恒流芯片每个通道输出电流值K系数 */
+const __attribute__ ((used,used,section(".parameter_config_19")))  uint8_t u8_cvcc_k_array[USED_CVCC_CHIP_NUMS][USED_CVCC_CHANNEL_NUMS] = { 
+@CVCC_K_ARRAY_ROWS@
+};
+
 const __attribute__ ((used,used,section(".parameter_config_20")))  uint8_t u8_drl_0_cvcc_map_array[2][2] = { { 0U, 0U }, { 0U, 0U } };
 /* 恒流类型4输出通道: 与TI互斥关闭，单独的DRL通道 */
 const __attribute__ ((used,used,section(".parameter_config_21")))  uint8_t u8_drl_0_cvcc_map_nums = 0U;
@@ -606,8 +597,6 @@ const __attribute__ ((used,used,section(".parameter_config_58")))  uint8_t u8_ti
 /* 信号灯电流输出方式：
    1. 实时更新电流值（0）。
    2. 只上电更新一次电流，基础电流固定设置为ti或者drl。 */
-
-/*
 
 const __attribute__ ((used,used,section(".parameter_config_59")))  uint8_t u8_drl_ntc_default_derate = 100U;
 
