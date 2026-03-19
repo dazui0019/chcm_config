@@ -19,25 +19,26 @@ const __attribute__ ((used,used,section(".parameter_config_2"))) APP_Cvcc_Cfg_T 
    /**  IC10 */ {            10U,   CVCC_NSL20912,        SUB_UARTCAN_1,         12U,    0x00000fffU, 99 },
 };
 
+/* CVCC输出电压表: 使用CVCC_OUTPUT_VOLTAGE_IDX_xVx访问，表项值为对应目标电压的BUCK寄存器码值。 */
 const __attribute__ ((used,used,section(".parameter_config_3"))) uint8_t g_cvcc_out_voltage_table[CVCC_OUTPUT_VOLTAGE_LEVELS] = {
-    68U, /**< level0 BUCK芯片输出5.0V */
-    66U, /**< level1 BUCK芯片输出5.2V */
-    63U, /**< level2 BUCK芯片输出5.4V */
-    60U, /**< level3 BUCK芯片输出5.6V */
-    58U, /**< level4 BUCK芯片输出5.8V */
-    55U, /**< level5 BUCK芯片输出6.0V */
-    52U, /**< level6 BUCK芯片输出6.2V */
-    49U, /**< level7 BUCK芯片输出6.4V */
-    47U, /**< level8 BUCK芯片输出6.6V */
-    44U, /**< level9 BUCK芯片输出6.8V */
-    42U, /**< level10 BUCK芯片输出7.0V */
-    39U, /**< level11 BUCK芯片输出7.2V */
-    36U, /**< level12 BUCK芯片输出7.4V */
-    34U, /**< level13 BUCK芯片输出7.6V */
-    31U, /**< level14 BUCK芯片输出7.8V */
-    28U, /**< level15 BUCK芯片输出8.0V */
-    26U, /**< level16 BUCK芯片输出8.2V */
-    23U, /**< level17 BUCK芯片输出8.4V */
+    [CVCC_OUTPUT_VOLTAGE_IDX_5V0] = @CVCC_OUTPUT_VOLTAGE_5V0@U, // target 5.0V
+    [CVCC_OUTPUT_VOLTAGE_IDX_5V2] = @CVCC_OUTPUT_VOLTAGE_5V2@U, // target 5.2V
+    [CVCC_OUTPUT_VOLTAGE_IDX_5V4] = @CVCC_OUTPUT_VOLTAGE_5V4@U, // target 5.4V
+    [CVCC_OUTPUT_VOLTAGE_IDX_5V6] = @CVCC_OUTPUT_VOLTAGE_5V6@U, // target 5.6V
+    [CVCC_OUTPUT_VOLTAGE_IDX_5V8] = @CVCC_OUTPUT_VOLTAGE_5V8@U, // target 5.8V
+    [CVCC_OUTPUT_VOLTAGE_IDX_6V0] = @CVCC_OUTPUT_VOLTAGE_6V0@U, // target 6.0V
+    [CVCC_OUTPUT_VOLTAGE_IDX_6V2] = @CVCC_OUTPUT_VOLTAGE_6V2@U, // target 6.2V
+    [CVCC_OUTPUT_VOLTAGE_IDX_6V4] = @CVCC_OUTPUT_VOLTAGE_6V4@U, // target 6.4V
+    [CVCC_OUTPUT_VOLTAGE_IDX_6V6] = @CVCC_OUTPUT_VOLTAGE_6V6@U, // target 6.6V
+    [CVCC_OUTPUT_VOLTAGE_IDX_6V8] = @CVCC_OUTPUT_VOLTAGE_6V8@U, // target 6.8V
+    [CVCC_OUTPUT_VOLTAGE_IDX_7V0] = @CVCC_OUTPUT_VOLTAGE_7V0@U, // target 7.0V
+    [CVCC_OUTPUT_VOLTAGE_IDX_7V2] = @CVCC_OUTPUT_VOLTAGE_7V2@U, // target 7.2V
+    [CVCC_OUTPUT_VOLTAGE_IDX_7V4] = @CVCC_OUTPUT_VOLTAGE_7V4@U, // target 7.4V
+    [CVCC_OUTPUT_VOLTAGE_IDX_7V6] = @CVCC_OUTPUT_VOLTAGE_7V6@U, // target 7.6V
+    [CVCC_OUTPUT_VOLTAGE_IDX_7V8] = @CVCC_OUTPUT_VOLTAGE_7V8@U, // target 7.8V
+    [CVCC_OUTPUT_VOLTAGE_IDX_8V0] = @CVCC_OUTPUT_VOLTAGE_8V0@U, // target 8.0V
+    [CVCC_OUTPUT_VOLTAGE_IDX_8V2] = @CVCC_OUTPUT_VOLTAGE_8V2@U, // target 8.2V
+    [CVCC_OUTPUT_VOLTAGE_IDX_8V4] = @CVCC_OUTPUT_VOLTAGE_8V4@U, // target 8.4V
 };
 
 /**< Config 0 TI 流水动画控制表格 */

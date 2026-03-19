@@ -33,6 +33,26 @@ SCALAR_DEFAULTS = {
     "TI_SWEEP_STEP_MAX": 0,
     "TI_SEEP_ANIMATION_MODE": 2,
 }
+CVCC_OUTPUT_VOLTAGE_CONFIGS = (
+    ("5V0", 68, "5.0V"),
+    ("5V2", 66, "5.2V"),
+    ("5V4", 63, "5.4V"),
+    ("5V6", 60, "5.6V"),
+    ("5V8", 58, "5.8V"),
+    ("6V0", 55, "6.0V"),
+    ("6V2", 52, "6.2V"),
+    ("6V4", 49, "6.4V"),
+    ("6V6", 47, "6.6V"),
+    ("6V8", 44, "6.8V"),
+    ("7V0", 42, "7.0V"),
+    ("7V2", 39, "7.2V"),
+    ("7V4", 36, "7.4V"),
+    ("7V6", 34, "7.6V"),
+    ("7V8", 31, "7.8V"),
+    ("8V0", 28, "8.0V"),
+    ("8V2", 26, "8.2V"),
+    ("8V4", 23, "8.4V"),
+)
 CHCM_CFG_ITEM_COUNT = 27
 CHCM_CFG_DEFAULT_NAME = {
     0: "Inactive",
@@ -201,6 +221,60 @@ def require_excel_payload(
     if not isinstance(payload, dict):
         raise ValueError(f"缺少 {sheet_name}.json，无法{purpose}。")
     return payload
+
+
+def load_kconfig_symbols(kconfig_payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    symbols = kconfig_payload.get("symbols")
+    if not isinstance(symbols, dict):
+        raise ValueError("Kconfig.json 缺少 symbols，无法生成 Kconfig 相关占位符。")
+    return symbols
+
+
+def read_kconfig_int_symbol(symbols: dict[str, dict[str, Any]], name: str, default: int) -> int:
+    symbol = symbols.get(name)
+    if not isinstance(symbol, dict):
+        return default
+    value = symbol.get("value")
+    if value is None:
+        return default
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"Kconfig 符号 {name} 必须是整数。")
+    return value
+
+
+def build_cvcc_output_voltage_placeholders(
+    kconfig_payload: dict[str, Any],
+    required_placeholders: set[str],
+) -> dict[str, int]:
+    voltage_placeholder_required = any(
+        name == "CVCC_OUTPUT_VOLTAGE_LEVELS"
+        or name.startswith("CVCC_OUTPUT_VOLTAGE_IDX_")
+        or name.startswith("CVCC_OUTPUT_VOLTAGE_")
+        for name in required_placeholders
+    )
+    if not voltage_placeholder_required:
+        return {}
+
+    symbols = load_kconfig_symbols(kconfig_payload)
+    expected_levels = len(CVCC_OUTPUT_VOLTAGE_CONFIGS)
+    configured_levels = read_kconfig_int_symbol(symbols, "CVCC_OUTPUT_VOLTAGE_LEVELS", expected_levels)
+    if configured_levels != expected_levels:
+        raise ValueError(
+            f"CVCC_OUTPUT_VOLTAGE_LEVELS 必须等于 {expected_levels}，当前为 {configured_levels}。"
+        )
+
+    placeholders: dict[str, int] = {
+        "CVCC_OUTPUT_VOLTAGE_LEVELS": configured_levels,
+    }
+    for index, (suffix, default_value, _comment) in enumerate(CVCC_OUTPUT_VOLTAGE_CONFIGS):
+        placeholders[f"CVCC_OUTPUT_VOLTAGE_IDX_{suffix}"] = index
+        placeholders[f"CVCC_OUTPUT_VOLTAGE_{suffix}"] = read_kconfig_int_symbol(
+            symbols,
+            f"CVCC_OUTPUT_VOLTAGE_{suffix}",
+            default_value,
+        )
+
+    return placeholders
 
 
 def coerce_chcm_cfg_word(value: Any) -> int | None:
@@ -526,6 +600,7 @@ def build_render_context(
 ) -> dict[str, Any]:
     placeholders = {**SCALAR_DEFAULTS, **extract_scalar_placeholders(kconfig_payload, excel_payloads)}
     sections: dict[str, str] = {}
+    placeholders.update(build_cvcc_output_voltage_placeholders(kconfig_payload, required_placeholders))
     placeholders.update(build_chcm_cfg_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_motor_placeholders(excel_payloads, required_placeholders))
 

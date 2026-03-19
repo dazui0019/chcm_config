@@ -38,3 +38,101 @@ config SYSTEM_COM_VERION
   int
   default 0 if COM_VERSION_V4
   default 1 if COM_VERSION_V5
+
+menu "CVCC Output Voltage Table"
+
+config CVCC_OUTPUT_VOLTAGE_LEVELS
+  int
+  default 18
+
+config CVCC_OUTPUT_VOLTAGE_5V0
+  int "BUCK output 5.0V register value"
+  range 0 255
+  default 68
+
+config CVCC_OUTPUT_VOLTAGE_5V2
+  int "BUCK output 5.2V register value"
+  range 0 255
+  default 66
+
+config CVCC_OUTPUT_VOLTAGE_5V4
+  int "BUCK output 5.4V register value"
+  range 0 255
+  default 63
+
+config CVCC_OUTPUT_VOLTAGE_5V6
+  int "BUCK output 5.6V register value"
+  range 0 255
+  default 60
+
+config CVCC_OUTPUT_VOLTAGE_5V8
+  int "BUCK output 5.8V register value"
+  range 0 255
+  default 58
+
+config CVCC_OUTPUT_VOLTAGE_6V0
+  int "BUCK output 6.0V register value"
+  range 0 255
+  default 55
+
+config CVCC_OUTPUT_VOLTAGE_6V2
+  int "BUCK output 6.2V register value"
+  range 0 255
+  default 52
+
+config CVCC_OUTPUT_VOLTAGE_6V4
+  int "BUCK output 6.4V register value"
+  range 0 255
+  default 49
+
+config CVCC_OUTPUT_VOLTAGE_6V6
+  int "BUCK output 6.6V register value"
+  range 0 255
+  default 47
+
+config CVCC_OUTPUT_VOLTAGE_6V8
+  int "BUCK output 6.8V register value"
+  range 0 255
+  default 44
+
+config CVCC_OUTPUT_VOLTAGE_7V0
+  int "BUCK output 7.0V register value"
+  range 0 255
+  default 42
+
+config CVCC_OUTPUT_VOLTAGE_7V2
+  int "BUCK output 7.2V register value"
+  range 0 255
+  default 39
+
+config CVCC_OUTPUT_VOLTAGE_7V4
+  int "BUCK output 7.4V register value"
+  range 0 255
+  default 36
+
+config CVCC_OUTPUT_VOLTAGE_7V6
+  int "BUCK output 7.6V register value"
+  range 0 255
+  default 34
+
+config CVCC_OUTPUT_VOLTAGE_7V8
+  int "BUCK output 7.8V register value"
+  range 0 255
+  default 31
+
+config CVCC_OUTPUT_VOLTAGE_8V0
+  int "BUCK output 8.0V register value"
+  range 0 255
+  default 28
+
+config CVCC_OUTPUT_VOLTAGE_8V2
+  int "BUCK output 8.2V register value"
+  range 0 255
+  default 26
+
+config CVCC_OUTPUT_VOLTAGE_8V4
+  int "BUCK output 8.4V register value"
+  range 0 255
+  default 23
+
+endmenu
