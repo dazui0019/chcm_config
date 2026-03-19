@@ -259,16 +259,7 @@ const __attribute__ ((used,used,section(".parameter_config_5"))) uint8_t u8_ti_s
 
 /**< Config 1 Signale LED 解闭锁动画控制表格 */
 const __attribute__ ((used,used,section(".parameter_config_6"))) uint16_t u8_lock_unlock_animation_total_steps[LOCK_UNLOCK_MAX_MODE_NUMS] = {
-    LOCK_MODE1_TOTAL_STEP,     /* LOCK_MODE1   */
-    LOCK_MODE2_TOTAL_STEP,     /* LOCK_MODE2   */
-    LOCK_MODE3_TOTAL_STEP,     /* LOCK_MODE3   */
-    LOCK_MODE4_TOTAL_STEP,     /* LOCK_MODE4   */
-    LOCK_MODE5_TOTAL_STEP,     /* LOCK_MODE5   */
-    UNLOCK_MODE1_TOTAL_STEP,   /* UNLOCK_MODE1 */
-    UNLOCK_MODE2_TOTAL_STEP,   /* UNLOCK_MODE2 */
-    UNLOCK_MODE3_TOTAL_STEP,   /* UNLOCK_MODE3 */
-    UNLOCK_MODE4_TOTAL_STEP,   /* UNLOCK_MODE4 */
-    UNLOCK_MODE5_TOTAL_STEP    /* UNLOCK_MODE5 */
+@LOCK_UNLOCK_ANIMATION_TOTAL_STEPS_ROWS@
 };
 
 #define LOCK_MODE1_ANIMATION_DATA_OFFSET ( 22U )
@@ -283,8 +274,8 @@ const __attribute__ ((used,used,section(".parameter_config_6"))) uint16_t u8_loc
 #define UNLOCK_MODE5_ANIMATION_DATA_OFFSET ( UNLOCK_MODE4_ANIMATION_DATA_OFFSET + UNLOCK_MODE4_TOTAL_STEP * SIGNAL_ANIMATION_LED_NUMS )
 
 
-const __attribute__ ((used,used,section(".parameter_config_7"))) uint8_t u8_lock_mode_type_nums = 1u;
-const __attribute__ ((used,used,section(".parameter_config_8"))) uint8_t u8_unlock_mode_type_nums = 1u;
+const __attribute__ ((used,used,section(".parameter_config_7"))) uint8_t u8_lock_mode_type_nums = @LOCK_MODE_TYPE_NUMS@u;
+const __attribute__ ((used,used,section(".parameter_config_8"))) uint8_t u8_unlock_mode_type_nums = @UNLOCK_MODE_TYPE_NUMS@u;
 
 /**< Config 1 LOCK MODE1 DATA */
 const __attribute__ ((used,used,section(".parameter_config_9")))  uint8_t u8_lock_mode1_animation[LOCK_MODE1_TOTAL_STEP][SIGNAL_ANIMATION_LED_NUMS] = {

@@ -47,12 +47,11 @@ SUPPORTED_SHEET_NAMES = (
     "HCM_PriLIN_Matrix",
     "CH_Cfg",
     "Animation_Cfg",
-    "E01 ADS Lock",
-    "E01 ADS Unlock",
     "current_config",
     "Motor_Cfg",
     "TI_sequential",
 )
+RAW_SIGNAL_ANIMATION_SHEET_PATTERN = re.compile(r"^(lock|unlock)\s+mode\s*(\d+)$", re.IGNORECASE)
 
 
 def normalize_text(value: Any) -> str | None:
@@ -761,6 +760,17 @@ def parse_e01_ads_animation(worksheet: Worksheet) -> dict[str, Any]:
     }
 
 
+def parse_raw_signal_animation_sheet_name(sheet_name: str) -> tuple[str, int] | None:
+    match = RAW_SIGNAL_ANIMATION_SHEET_PATTERN.fullmatch(sheet_name.strip())
+    if match is None:
+        return None
+    return match.group(1).lower(), int(match.group(2))
+
+
+def is_supported_sheet_name(sheet_name: str) -> bool:
+    return sheet_name in SUPPORTED_SHEET_NAMES or parse_raw_signal_animation_sheet_name(sheet_name) is not None
+
+
 def parse_current_config_function(
     worksheet: Worksheet,
     value_worksheet: Worksheet,
@@ -1216,6 +1226,7 @@ def condense_animation_cfg(parsed: dict[str, Any]) -> dict[str, Any]:
         return {
             "mode_name": animation["mode_name"],
             "channel_type": animation["channel_type"],
+            "total_steps": len(animation["frames"]),
             "frames": [
                 {
                     "time_ms": frame["time_ms"],
@@ -1373,9 +1384,7 @@ def parse_sheet(worksheet: Worksheet, value_worksheet: Worksheet | None = None) 
         return parse_ch_cfg(worksheet)
     if sheet_name == "Animation_Cfg":
         return parse_animation_cfg(worksheet)
-    if sheet_name == "E01 ADS Lock":
-        return parse_e01_ads_animation(worksheet)
-    if sheet_name == "E01 ADS Unlock":
+    if parse_raw_signal_animation_sheet_name(sheet_name) is not None:
         return parse_e01_ads_animation(worksheet)
     if sheet_name == "current_config":
         return parse_current_config(worksheet, value_worksheet or worksheet)
@@ -1433,7 +1442,7 @@ def find_supported_sheets(workbook) -> list[Worksheet]:
     seen: dict[str, Worksheet] = {}
     for sheet in workbook.worksheets:
         sheet_name = sheet.title.strip()
-        if sheet_name not in SUPPORTED_SHEET_NAMES:
+        if not is_supported_sheet_name(sheet_name):
             continue
         if sheet_name in seen:
             names = ", ".join(repr(item.title) for item in (seen[sheet_name], sheet))
@@ -1444,6 +1453,7 @@ def find_supported_sheets(workbook) -> list[Worksheet]:
     if not supported_sheets:
         available = ", ".join(repr(sheet.title) for sheet in workbook.worksheets)
         supported = ", ".join(repr(sheet_name) for sheet_name in SUPPORTED_SHEET_NAMES)
+        supported += ", 'lock ModeN/unlock ModeN'"
         raise ValueError(f"未找到任何已支持的 sheet。已支持 sheet: {supported}。可用 sheet: {available}")
     return supported_sheets
 
