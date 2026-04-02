@@ -285,19 +285,19 @@ extern const __attribute__ ((section(".parameter_config_27"))) uint8_t u8_drl_2_
 extern const __attribute__ ((section(".parameter_config_28"))) uint8_t u8_drl_2_unlock_lock_offset;
 
 /* 恒流类型3输出通道: 与TI互斥关闭, DRL和PL共用通道 */
-extern const __attribute__ ((section(".parameter_config_29"))) uint8_t u8_drl_pl_0_cvcc_map_array[20][2];
+extern const __attribute__ ((section(".parameter_config_29"))) uint8_t u8_drl_pl_0_cvcc_map_array[@CH_CFG_TYPE2_CVCC_MAP_ARRAY_SIZE@][2];
 extern const __attribute__ ((section(".parameter_config_30"))) uint8_t u8_drl_pl_0_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_31"))) uint8_t u8_drl_pl_0_pl_duty;
 extern const __attribute__ ((section(".parameter_config_32"))) uint8_t u8_drl_pl_0_unlock_lock_offset;
 
 /* 恒流类型5输出通道: 与TI互斥降额, DRL和PL共用通道。 */
-extern const __attribute__ ((section(".parameter_config_33"))) uint8_t u8_drl_pl_1_cvcc_map_array[16][2];
+extern const __attribute__ ((section(".parameter_config_33"))) uint8_t u8_drl_pl_1_cvcc_map_array[@CH_CFG_TYPE3_CVCC_MAP_ARRAY_SIZE@][2];
 extern const __attribute__ ((section(".parameter_config_34"))) uint8_t u8_drl_pl_1_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_35"))) uint8_t u8_drl_pl_1_pl_duty;
 extern const __attribute__ ((section(".parameter_config_36"))) uint8_t u8_drl_pl_1_unlock_lock_offset;
 
-/* 恒流类型7输出通道: 单独的DRL和PL共用通道 */
-extern const __attribute__ ((section(".parameter_config_37"))) uint8_t u8_drl_pl_2_cvcc_map_array[2][2];
+/* 恒流类型4输出通道: TI使能时依照PL>DRL优先级判断点亮, DRL和PL共用通道 */
+extern const __attribute__ ((section(".parameter_config_37"))) uint8_t u8_drl_pl_2_cvcc_map_array[@CH_CFG_TYPE4_CVCC_MAP_ARRAY_SIZE@][2];
 extern const __attribute__ ((section(".parameter_config_38"))) uint8_t u8_drl_pl_2_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_39"))) uint8_t u8_drl_pl_2_pl_duty;
 extern const __attribute__ ((section(".parameter_config_40"))) uint8_t u8_drl_pl_2_unlock_lock_offset;
@@ -319,7 +319,7 @@ extern const __attribute__ ((section(".parameter_config_49"))) uint8_t u8_pl_dut
 /* 恒流类型1输出通道: 单独的TI通道输出 T1 */
 extern const __attribute__ ((section(".parameter_config_50"))) uint8_t u8_ti_cvcc_map_array[40][2];
 extern const __attribute__ ((section(".parameter_config_51"))) uint8_t u8_ti_cvcc_map_nums;
-extern const __attribute__ ((section(".parameter_config_52"))) uint8_t u8_ti_drl_pl_cvcc_map_array[2][2];
+extern const __attribute__ ((section(".parameter_config_52"))) uint8_t u8_ti_drl_pl_cvcc_map_array[@CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE@][2];
 
 /* 恒流类型2输出通道: TI/DRL/PL共用通道 */
 extern const __attribute__ ((section(".parameter_config_53"))) uint8_t u8_ti_drl_pl_cvcc_map_nums;
