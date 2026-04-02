@@ -20,6 +20,41 @@ VERSION_PLACEHOLDER_MAP = {
 }
 
 
+def is_json_scalar(value: Any) -> bool:
+    return value is None or isinstance(value, (bool, int, float, str))
+
+
+def render_json_compact(value: Any, indent: int = 0) -> str:
+    if is_json_scalar(value):
+        return json.dumps(value, ensure_ascii=False)
+
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        if all(is_json_scalar(item) for item in value):
+            return json.dumps(value, ensure_ascii=False)
+
+        child_indent = indent + 2
+        rendered_items = [
+            f"{' ' * child_indent}{render_json_compact(item, child_indent)}"
+            for item in value
+        ]
+        return "[\n" + ",\n".join(rendered_items) + "\n" + (" " * indent) + "]"
+
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+
+        child_indent = indent + 2
+        rendered_items = [
+            f"{' ' * child_indent}{json.dumps(str(key), ensure_ascii=False)}: {render_json_compact(item, child_indent)}"
+            for key, item in value.items()
+        ]
+        return "{\n" + ",\n".join(rendered_items) + "\n" + (" " * indent) + "}"
+
+    raise TypeError(f"Unsupported JSON value type: {type(value).__name__}")
+
+
 def coerce_symbol_value(symbol) -> Any:
     symbol_type = symbol.type
     value = symbol.str_value
@@ -112,7 +147,7 @@ def main() -> None:
 
     payload = build_output_payload(kconfig, args.kconfig, args.config)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    args.output.write_text(render_json_compact(payload) + "\n", encoding="utf-8")
 
     print(f"Kconfig: {args.kconfig}")
     print(f"Config: {args.config}")

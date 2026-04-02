@@ -165,6 +165,41 @@ def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def is_json_scalar(value: Any) -> bool:
+    return value is None or isinstance(value, (bool, int, float, str))
+
+
+def render_json_compact(value: Any, indent: int = 0) -> str:
+    if is_json_scalar(value):
+        return json.dumps(value, ensure_ascii=False)
+
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        if all(is_json_scalar(item) for item in value):
+            return json.dumps(value, ensure_ascii=False)
+
+        child_indent = indent + 2
+        rendered_items = [
+            f"{' ' * child_indent}{render_json_compact(item, child_indent)}"
+            for item in value
+        ]
+        return "[\n" + ",\n".join(rendered_items) + "\n" + (" " * indent) + "]"
+
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+
+        child_indent = indent + 2
+        rendered_items = [
+            f"{' ' * child_indent}{json.dumps(str(key), ensure_ascii=False)}: {render_json_compact(item, child_indent)}"
+            for key, item in value.items()
+        ]
+        return "{\n" + ",\n".join(rendered_items) + "\n" + (" " * indent) + "}"
+
+    raise TypeError(f"Unsupported JSON value type: {type(value).__name__}")
+
+
 def load_excel_jsons(input_dir: Path, excluded_files: set[Path]) -> dict[str, dict[str, Any]]:
     excel_payloads: dict[str, dict[str, Any]] = {}
     for path in sorted(input_dir.glob("*.json")):
@@ -1308,7 +1343,7 @@ def main() -> None:
 
     payload = build_render_context(excel_payloads, kconfig_payload, required_placeholders)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    args.output.write_text(render_json_compact(payload) + "\n", encoding="utf-8")
 
     print(f"Input dir: {args.input_dir}")
     print(f"Kconfig JSON: {args.kconfig_json}")

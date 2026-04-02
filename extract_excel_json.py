@@ -112,6 +112,41 @@ def with_output_schema(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def is_json_scalar(value: Any) -> bool:
+    return value is None or isinstance(value, (bool, int, float, str))
+
+
+def render_json_compact(value: Any, indent: int = 0) -> str:
+    if is_json_scalar(value):
+        return json.dumps(value, ensure_ascii=False)
+
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        if all(is_json_scalar(item) for item in value):
+            return json.dumps(value, ensure_ascii=False)
+
+        child_indent = indent + 2
+        rendered_items = [
+            f"{' ' * child_indent}{render_json_compact(item, child_indent)}"
+            for item in value
+        ]
+        return "[\n" + ",\n".join(rendered_items) + "\n" + (" " * indent) + "]"
+
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+
+        child_indent = indent + 2
+        rendered_items = [
+            f"{' ' * child_indent}{json.dumps(str(key), ensure_ascii=False)}: {render_json_compact(item, child_indent)}"
+            for key, item in value.items()
+        ]
+        return "{\n" + ",\n".join(rendered_items) + "\n" + (" " * indent) + "}"
+
+    raise TypeError(f"不支持的 JSON 值类型: {type(value).__name__}")
+
+
 def load_workbook_path_from_kconfig(config_path: Path) -> Path | None:
     if not KCONFIG_FILE.is_file():
         return None
@@ -1525,7 +1560,7 @@ def main() -> None:
             output_payload = condense_sheet(parsed)
             output_path = resolve_output_path(args.output, parsed["sheet_name"], multi_sheet=batch_mode)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(json.dumps(output_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            output_path.write_text(render_json_compact(output_payload) + "\n", encoding="utf-8")
             item_count = count_output_items(output_payload)
 
             print(f"Wrote {output_path}")
