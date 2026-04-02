@@ -243,13 +243,6 @@ uv run python render_app_config.py --context <context.json> --header-template <h
 `build_render_context.py` 生成的 `render_context.json` 会同时保留原始 `excel` / `kconfig` 数据，以及模板渲染用的 `placeholders` / `sections`。
 render context JSON 推荐结构可参考 [templates/README.md](templates/README.md)。
 
-## TODO
-
-- 评估是否把 `CHCM_CFG_IDX_MAX` 改为 Kconfig 可配置项，用它动态控制 `CHCM` 尾部 `RESERVED` 数量。
-- 如果启用这个方案，需要同时调整 `build_render_context.py`、`templates/app_config.h.tpl` 和 `templates/app_config.c.tpl`，不能只修改 `CHCM_CFG_IDX_MAX` 一个值。
-- 这个动态逻辑会同时影响 `.h` 里的 `RESERVED` 宏数量，以及 `.c` 里的 `CHCM_Cfg[]` 数组长度和尾部 `reserved` 项数量。
-- 预期方向是以 Excel 实际 CFG 数量作为前半段固定项，再由 `CHCM_CFG_IDX_MAX` 推导尾部 `RESERVED` 数量；当配置值小于 Excel 实际项数量时，脚本应直接报错。
-
 ## 当前输出格式
 
 所有输出结果的顶层都会包含 `schema_version`，便于程序侧做格式兼容。
@@ -502,3 +495,21 @@ render context JSON 推荐结构可参考 [templates/README.md](templates/README
 
 - 当前脚本已实现 `HCM_PriLIN_Matrix`、`CH_Cfg`、`current_config`、`Motor_Cfg`、`TI_sequential`，以及所有匹配 `Lock ModeN` / `Unlock ModeN` 的原始动画 sheet；默认会把工作簿中存在的这些已支持 sheet 都转换出来
 - `xlsx/` 和 `output/` 默认被 `.gitignore` 忽略，不会自动提交到 Git
+
+## History
+
+### 2026/04/02
+
+1. 完成通道 type 0 - type 4 的配置
+2. 清理模板文件
+
+## TODO
+
+- [ ] 替换type 5 - type 9的通道配置
+
+### Kconfig
+
+- 评估是否把 `CHCM_CFG_IDX_MAX` 改为 Kconfig 可配置项，用它动态控制 `CHCM` 尾部 `RESERVED` 数量。
+- 如果启用这个方案，需要同时调整 `build_render_context.py`、`templates/app_config.h.tpl` 和 `templates/app_config.c.tpl`，不能只修改 `CHCM_CFG_IDX_MAX` 一个值。
+- 这个动态逻辑会同时影响 `.h` 里的 `RESERVED` 宏数量，以及 `.c` 里的 `CHCM_Cfg[]` 数组长度和尾部 `reserved` 项数量。
+- 预期方向是以 Excel 实际 CFG 数量作为前半段固定项，再由 `CHCM_CFG_IDX_MAX` 推导尾部 `RESERVED` 数量；当配置值小于 Excel 实际项数量时，脚本应直接报错。
