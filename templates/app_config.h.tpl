@@ -128,12 +128,9 @@ typedef struct
     uint8_t ic_max_current;     /**< CVCC芯片最大可设电流值 */
 }APP_Cvcc_Cfg_T;
 
-/**< Config 1 流水点亮灯珠分配，当前为40颗灯珠 */
-#define TI_USED_LED_NUMS           (  40U )
-#define TI_USED_LED_NUMS_DATA_LENS (   2U ) /**< 需要2*32bit的数据才能表示64颗灯珠的状态：2 = 64 / 32 */
-#define TI_SWEEP_CYCLE_TIME        ( 200U ) /**< 每步流水持续时间，单位：ms */
+/**< Config 1 流水点亮灯珠分配，通道数量来自 current_config.json */
+#define TI_USED_LED_NUMS           ( @TI_USED_LED_NUMS@U )
 #define TI_SWEEP_USER_STEP         (  20U ) /**< 用户设置的流水步数，最大不能超过20步 */
-#define TI_SWEEP_STEP_MAX          (  20U ) /**< 最大流水步数 */
 
 #define TI_SEEP_ANIMATION_MODE     ( 2U )  /**< 0:流水动画1 1:流水动画2 */
 /** MOTOR CONFIGURATION */
@@ -242,15 +239,15 @@ extern const __attribute__ ((section(".parameter_config_5"))) uint8_t u8_ti_swee
 
 #define LOCK_UNLOCK_MAX_MODE_NUMS  ( 10U ) /**< 最大闭锁/解锁动画模式数 */
 
-#define TI_DRL_PL_LED_NUMS         ( 64U ) /**< TI/DRL/PL使用的灯珠数 */
-#define TI_LED_NUMS                ( 0U  ) /**< TI 使用的灯珠数 */
+#define TI_DRL_PL_LED_NUMS         ( @TI_DRL_PL_LED_NUMS@U ) /**< TI/DRL/PL使用的通道数 */
+#define TI_LED_NUMS                ( @TI_LED_NUMS@U ) /**< TI 使用的通道数 */
 #define DRL_PL_0_LED_NUMS          ( 0U  ) /**< DRL/PL0 使用的灯珠数 */
 #define DRL_0_LED_NUMS             ( 0U  ) /**< DRL0 使用的灯珠数 */
 #define DRL_PL_1_LED_NUMS          ( 0U  ) /**< DRL/PL1 使用的灯珠数 */
 #define DRL_1_LED_NUMS             ( 0U  ) /**< DRL1 使用的灯珠数 */
 #define DRL_PL_2_LED_NUMS          ( 0U  ) /**< DRL/PL2 使用的灯珠数 */
 #define DRL_2_LED_NUMS             ( 0U  ) /**< DRL2 使用的灯珠数 */
-#define PL_LED_NUMS                ( 0U  ) /**< PL 使用的灯珠数 */
+#define PL_LED_NUMS                ( @PL_LED_NUMS@U ) /**< PL 使用的通道数 */
 
 #define SIGNAL_ANIMATION_LED_NUMS  ( 54U ) /**< 信号动画使用的灯珠数 */
 

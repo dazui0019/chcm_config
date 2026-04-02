@@ -45,28 +45,8 @@ const __attribute__ ((used,used,section(".parameter_config_3"))) uint8_t g_cvcc_
 /**< TI 流水动画, 每步每个led灯珠占空比(基于TI原始占空比) */
 const __attribute__ ((used,used,section(".parameter_config_4"))) uint8_t u8_ti_sweep_led_nums = TI_USED_LED_NUMS;/**< Number of used LEDs */
 const __attribute__ ((used,used,section(".parameter_config_5"))) uint8_t u8_ti_sweep_led_k[TI_SWEEP_USER_STEP + 1u][TI_USED_LED_NUMS] = {
-/**<   TI20  TI20  TI19  TI19  TI18  TI18  TI17  TI17  TI16  TI16  TI15  TI15  TI14  TI14  TI13  TI13  TI12  TI12  TI11  TI11  TI10  TI10  TI09  TI09  TI08  TI08  TI07  TI07  TI06  TI06  TI05  TI05  TI04  TI04  TI03  TI03  TI02  TI02  TI01  TI01 */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U},/**<   0ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U},/**<  10ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U},/**<  20ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**<  30ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**<  40ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**<  50ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**<  60ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**<  70ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**<  80ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**<  90ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**< 100ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**< 110ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**< 120ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**< 130ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**< 140ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**< 150ms */
-    {  0U,   0U,   0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**< 160ms */
-    {  0U,   0U,   0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**< 170ms */
-    {  0U,   0U,   100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**< 180ms */
-    {  100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U},/**< 190ms */
-    {  100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U, 100U} /**< 200ms */
+/**<   @TI_SWEEP_LED_K_HEADER@ */
+@TI_SWEEP_LED_K_ROWS@
 };
 
 /**< Config 1 Signale LED 解闭锁动画控制表格 */
@@ -242,7 +222,7 @@ const __attribute__ ((used,used,section(".parameter_config_45")))  uint8_t u8_pl
     { 8U, 8U },  /**<  18 - GRILL_POS_9 */
 };
 /* 恒流类型9输出通道: 单独的PL通道 */
-const __attribute__ ((used,used,section(".parameter_config_46")))  uint8_t u8_pl_cvcc_map_nums =18U;
+const __attribute__ ((used,used,section(".parameter_config_46")))  uint8_t u8_pl_cvcc_map_nums = @PL_ONLY_LED_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_47")))  uint8_t u8_pl_cvcc_current = 30U;
 const __attribute__ ((used,used,section(".parameter_config_48")))  uint8_t u8_pl_unlock_lock_offset = 36U;
 const __attribute__ ((used,used,section(".parameter_config_49")))  uint8_t u8_pl_duty_cfg = 20U;
@@ -289,7 +269,7 @@ const __attribute__ ((used,used,section(".parameter_config_50")))  uint8_t u8_ti
     { 2U, 0U }, /**< 40 - TI_01 */
 };
 /* 恒流类型1输出通道: 单独的TI通道输出 */
-const __attribute__ ((used,used,section(".parameter_config_51")))  uint8_t u8_ti_cvcc_map_nums = 40U;
+const __attribute__ ((used,used,section(".parameter_config_51")))  uint8_t u8_ti_cvcc_map_nums = @TI_LED_NUMS@U;
 
 /* 恒流类型1输出通道个数 */
 const __attribute__ ((used,used,section(".parameter_config_52")))  uint8_t u8_ti_drl_pl_cvcc_map_array[2][2] = { 
@@ -299,7 +279,7 @@ const __attribute__ ((used,used,section(".parameter_config_52")))  uint8_t u8_ti
 
 /* 恒流类型2输出通道
    TI/DRL/PL共用通道 */
-const __attribute__ ((used,used,section(".parameter_config_53")))  uint8_t u8_ti_drl_pl_cvcc_map_nums = 0U;
+const __attribute__ ((used,used,section(".parameter_config_53")))  uint8_t u8_ti_drl_pl_cvcc_map_nums = @TI_DRL_PL_SHARED_LED_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_54")))  uint8_t u8_ti_drl_pl_unlock_lock_offset = 255U;
 /* 恒流类型2输出通道个数 */
 const __attribute__ ((used,used,section(".parameter_config_55")))  uint8_t u8_adas_cvcc_map_array[16][2] = 
@@ -322,7 +302,7 @@ const __attribute__ ((used,used,section(".parameter_config_55")))  uint8_t u8_ad
     {  0U,  5U }, /**< 16 - ADAS_06 */
 };
 
-const __attribute__ ((used,used,section(".parameter_config_56")))  uint8_t u8_adas_cvcc_map_nums = 16U;
+const __attribute__ ((used,used,section(".parameter_config_56")))  uint8_t u8_adas_cvcc_map_nums = @ADAS_LED_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_57")))  uint8_t u8_adas_cvcc_current = 50U;
 
 const __attribute__ ((used,used,section(".parameter_config_58")))  uint8_t u8_ti_drl_current_method = 1U;

@@ -34,6 +34,13 @@ SCALAR_DEFAULTS = {
     "TI_SWEEP_USER_STEP": 0,
     "TI_SWEEP_STEP_MAX": 0,
     "TI_SEEP_ANIMATION_MODE": 2,
+    "TI_DRL_PL_LED_NUMS": 0,
+    "TI_LED_NUMS": 0,
+    "DRL_LED_NUMS": 0,
+    "PL_LED_NUMS": 0,
+    "PL_ONLY_LED_NUMS": 0,
+    "ADAS_LED_NUMS": 0,
+    "TI_DRL_PL_SHARED_LED_NUMS": 0,
 }
 CVCC_OUTPUT_VOLTAGE_CONFIGS = (
     ("5V0", 68, "5.0V"),
@@ -62,6 +69,7 @@ CVCC_K_ARRAY_FIXED_CHANNEL_COUNT = 24
 ANIMATION_CFG_KIND_NAMES = ("lock", "unlock")
 ANIMATION_CFG_MAX_MODE_COUNT = 5
 RAW_SIGNAL_ANIMATION_SHEET_PATTERN = re.compile(r"^(lock|unlock)\s+mode\s*(\d+)$", re.IGNORECASE)
+TI_SEQUENTIAL_CHANNEL_PATTERN = re.compile(r"^IC(\d+)-CH(\d+)$")
 CVCC_IC_TYPE_SYMBOL_TO_MACRO = {
     "CVCC_IC_TYPE_TPS929120": "CVCC_TPS929120",
     "CVCC_IC_TYPE_TPS929160": "CVCC_TPS929160",
@@ -183,6 +191,60 @@ def is_block_placeholder(name: str) -> bool:
     return any(token in name for token in BLOCK_PLACEHOLDER_TOKENS)
 
 
+def extract_current_config_channel_counts(current_config_payload: dict[str, Any]) -> dict[str, int]:
+    channels = current_config_payload.get("channels")
+    if not isinstance(channels, dict):
+        return {}
+
+    ti_led_nums = 0
+    drl_led_nums = 0
+    pl_led_nums = 0
+    pl_only_led_nums = 0
+    adas_led_nums = 0
+    ti_drl_pl_led_nums = 0
+    ti_drl_pl_shared_led_nums = 0
+
+    for channel_payload in channels.values():
+        if not isinstance(channel_payload, dict):
+            continue
+
+        function_names: set[str] = set()
+        for function_key in ("primary_function", "secondary_function"):
+            function_payload = channel_payload.get(function_key)
+            if not isinstance(function_payload, dict):
+                continue
+            function_name = function_payload.get("name")
+            if isinstance(function_name, str) and function_name:
+                function_names.add(function_name)
+
+        if "TI" in function_names:
+            ti_led_nums += 1
+        if "DRL" in function_names:
+            drl_led_nums += 1
+        if "PL" in function_names:
+            pl_led_nums += 1
+        if function_names == {"PL"}:
+            pl_only_led_nums += 1
+        if "ADAS" in function_names:
+            adas_led_nums += 1
+        if function_names & {"TI", "DRL", "PL"}:
+            ti_drl_pl_led_nums += 1
+        if {"TI", "DRL", "PL"} <= function_names:
+            ti_drl_pl_shared_led_nums += 1
+
+    return {
+        "TI_USED_LED_NUMS": ti_led_nums,
+        "TI_USED_LED_NUMS_DATA_LENS": math.ceil(ti_led_nums / 32) if ti_led_nums else 0,
+        "TI_DRL_PL_LED_NUMS": ti_drl_pl_led_nums,
+        "TI_LED_NUMS": ti_led_nums,
+        "DRL_LED_NUMS": drl_led_nums,
+        "PL_LED_NUMS": pl_led_nums,
+        "PL_ONLY_LED_NUMS": pl_only_led_nums,
+        "ADAS_LED_NUMS": adas_led_nums,
+        "TI_DRL_PL_SHARED_LED_NUMS": ti_drl_pl_shared_led_nums,
+    }
+
+
 def extract_scalar_placeholders(kconfig_payload: dict[str, Any], excel_payloads: dict[str, dict[str, Any]]) -> dict[str, Any]:
     placeholders = dict(kconfig_payload.get("placeholders", {}))
 
@@ -196,16 +258,9 @@ def extract_scalar_placeholders(kconfig_payload: dict[str, Any], excel_payloads:
     if used_cvcc_ic_nums is not None:
         placeholders["USED_CVCC_CHIP_NUMS"] = used_cvcc_ic_nums
 
-    frames = ti_sequential.get("animation", {}).get("frames", [])
-    ti_channels = {
-        channel_name
-        for frame in frames
-        for channel_name in frame.get("channels", {})
-    }
-    if ti_channels:
-        placeholders["TI_USED_LED_NUMS"] = len(ti_channels)
-        placeholders["TI_USED_LED_NUMS_DATA_LENS"] = math.ceil(len(ti_channels) / 32)
+    placeholders.update(extract_current_config_channel_counts(current_config))
 
+    frames = ti_sequential.get("animation", {}).get("frames", [])
     if len(frames) >= 2:
         first_time = frames[0].get("time_ms")
         second_time = frames[1].get("time_ms")
@@ -756,6 +811,109 @@ def format_e01_ads_animation_rows(frames: list[dict[str, Any]], column_count: in
     return format_signal_animation_rows(normalized_frames)
 
 
+def parse_ti_sequential_channel_name(channel_name: str, channel_count_per_ic: int) -> tuple[int, int]:
+    match = TI_SEQUENTIAL_CHANNEL_PATTERN.fullmatch(channel_name)
+    if match is None:
+        raise ValueError(f"TI_sequential 存在无效通道名 {channel_name!r}。")
+
+    ic_index = int(match.group(1))
+    channel_index = int(match.group(2))
+    if channel_index >= channel_count_per_ic:
+        raise ValueError(
+            f"TI_sequential 通道 {channel_name!r} 超出每颗 IC 的通道范围 0..{channel_count_per_ic - 1}。"
+        )
+    return ic_index, channel_index
+
+
+def validate_ti_sequential_payload(payload: dict[str, Any]) -> tuple[list[tuple[int, dict[str, int]]], list[str]]:
+    animation = require_dict(payload, "animation", "TI_sequential")
+    frames = animation.get("frames")
+    if not isinstance(frames, list) or not frames:
+        raise ValueError("TI_sequential 缺少有效的 animation.frames，无法生成 TI 流水表。")
+
+    channel_count_per_ic = payload.get("channel_count_per_ic")
+    if isinstance(channel_count_per_ic, bool) or not isinstance(channel_count_per_ic, int) or channel_count_per_ic <= 0:
+        raise ValueError("TI_sequential 缺少有效的 channel_count_per_ic，无法生成 TI 流水表。")
+
+    normalized_frames: list[tuple[int, dict[str, int]]] = []
+    ordered_channel_map: dict[str, tuple[int, int]] = {}
+
+    for frame in frames:
+        if not isinstance(frame, dict):
+            raise ValueError("TI_sequential 存在无效帧，无法生成 TI 流水表。")
+
+        time_ms = frame.get("time_ms")
+        if isinstance(time_ms, bool) or not isinstance(time_ms, int):
+            raise ValueError("TI_sequential 存在无效 time_ms，无法生成 TI 流水表。")
+
+        channels = frame.get("channels")
+        if not isinstance(channels, dict):
+            raise ValueError("TI_sequential 存在无效 channels，无法生成 TI 流水表。")
+
+        normalized_channels: dict[str, int] = {}
+        for channel_name, value in channels.items():
+            if not isinstance(channel_name, str):
+                raise ValueError("TI_sequential 存在非字符串通道名，无法生成 TI 流水表。")
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError(f"TI_sequential 通道 {channel_name!r} 的 PWM 值必须是整数。")
+
+            channel_key = parse_ti_sequential_channel_name(channel_name, channel_count_per_ic)
+            ordered_channel_map[channel_name] = channel_key
+            normalized_channels[channel_name] = value
+
+        normalized_frames.append((time_ms, normalized_channels))
+
+    ordered_channels = [
+        channel_name
+        for channel_name, _channel_key in sorted(
+            ordered_channel_map.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )
+    ]
+    if not ordered_channels:
+        raise ValueError("TI_sequential 未找到任何有效通道，无法生成 TI 流水表。")
+
+    return normalized_frames, ordered_channels
+
+
+def format_ti_sequential_header(ordered_channels: list[str], channel_count_per_ic: int) -> str:
+    labels: list[str] = []
+    for channel_name in ordered_channels:
+        ic_index, channel_index = parse_ti_sequential_channel_name(channel_name, channel_count_per_ic)
+        led_index = ((ic_index - 2) * 8 + channel_index) // 2 + 1
+        labels.append(f"TI{led_index:02d}")
+    return "  ".join(labels)
+
+
+def build_ti_sequential_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+) -> dict[str, str]:
+    ti_placeholder_required = any(
+        name in {"TI_SWEEP_LED_K_HEADER", "TI_SWEEP_LED_K_ROWS"}
+        for name in required_placeholders
+    )
+    if not ti_placeholder_required:
+        return {}
+
+    payload = require_excel_payload(excel_payloads, "TI_sequential", purpose="生成 TI 流水动画占位符")
+    normalized_frames, ordered_channels = validate_ti_sequential_payload(payload)
+    channel_count_per_ic = int(payload["channel_count_per_ic"])
+
+    row_frames = [
+        ([channels.get(channel_name, 0) for channel_name in ordered_channels], time_ms)
+        for time_ms, channels in normalized_frames
+    ]
+
+    placeholders: dict[str, str] = {}
+    if "TI_SWEEP_LED_K_HEADER" in required_placeholders:
+        placeholders["TI_SWEEP_LED_K_HEADER"] = format_ti_sequential_header(ordered_channels, channel_count_per_ic)
+    if "TI_SWEEP_LED_K_ROWS" in required_placeholders:
+        placeholders["TI_SWEEP_LED_K_ROWS"] = format_signal_animation_rows(row_frames)
+    return placeholders
+
+
 def coerce_chcm_cfg_word(value: Any) -> int | None:
     if value is None:
         return 0
@@ -1083,6 +1241,7 @@ def build_render_context(
     signal_animation = build_raw_signal_animation_domain(excel_payloads)
     placeholders.update(build_cvcc_cfg_placeholders(cvcc_cfg, required_placeholders))
     placeholders.update(build_raw_signal_animation_placeholders(signal_animation, required_placeholders))
+    placeholders.update(build_ti_sequential_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_cvcc_output_voltage_placeholders(kconfig_payload, required_placeholders))
     placeholders.update(build_chcm_cfg_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_motor_placeholders(excel_payloads, required_placeholders))
