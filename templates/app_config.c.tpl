@@ -105,16 +105,22 @@ const __attribute__ ((used,used,section(".parameter_config_19")))  uint8_t u8_cv
 @CVCC_K_ARRAY_ROWS@
 };
 
-const __attribute__ ((used,used,section(".parameter_config_20")))  uint8_t u8_drl_0_cvcc_map_array[2][2] = { { 0U, 0U }, { 0U, 0U } };
-const __attribute__ ((used,used,section(".parameter_config_21")))  uint8_t u8_drl_0_cvcc_map_nums = 0U;
+const __attribute__ ((used,used,section(".parameter_config_20")))  uint8_t u8_drl_0_cvcc_map_array[@CH_CFG_TYPE5_CVCC_MAP_ARRAY_SIZE@][2] = { 
+@CH_CFG_TYPE5_CVCC_MAP_ROWS@
+};
+const __attribute__ ((used,used,section(".parameter_config_21")))  uint8_t u8_drl_0_cvcc_map_nums = @CH_CFG_TYPE5_CVCC_MAP_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_22")))  uint8_t u8_drl_0_unlock_lock_offset = 255U;
 
-const __attribute__ ((used,used,section(".parameter_config_23")))  uint8_t u8_drl_1_cvcc_map_array[2][2] = { { 0U, 0U }, { 0U, 0U } };
-const __attribute__ ((used,used,section(".parameter_config_24")))  uint8_t u8_drl_1_cvcc_map_nums = 0U;
+const __attribute__ ((used,used,section(".parameter_config_23")))  uint8_t u8_drl_1_cvcc_map_array[@CH_CFG_TYPE6_CVCC_MAP_ARRAY_SIZE@][2] = { 
+@CH_CFG_TYPE6_CVCC_MAP_ROWS@
+};
+const __attribute__ ((used,used,section(".parameter_config_24")))  uint8_t u8_drl_1_cvcc_map_nums = @CH_CFG_TYPE6_CVCC_MAP_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_25")))  uint8_t u8_drl_1_unlock_lock_offset = 255U;
 
-const __attribute__ ((used,used,section(".parameter_config_26")))  uint8_t u8_drl_2_cvcc_map_array[2][2] = { { 0U, 0U }, { 0U, 0U } };
-const __attribute__ ((used,used,section(".parameter_config_27")))  uint8_t u8_drl_2_cvcc_map_nums = 0U;
+const __attribute__ ((used,used,section(".parameter_config_26")))  uint8_t u8_drl_2_cvcc_map_array[@CH_CFG_TYPE7_CVCC_MAP_ARRAY_SIZE@][2] = { 
+@CH_CFG_TYPE7_CVCC_MAP_ROWS@
+};
+const __attribute__ ((used,used,section(".parameter_config_27")))  uint8_t u8_drl_2_cvcc_map_nums = @CH_CFG_TYPE7_CVCC_MAP_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_28")))  uint8_t u8_drl_2_unlock_lock_offset = 255U;
 
 const __attribute__ ((used,used,section(".parameter_config_29")))  uint8_t u8_drl_pl_0_cvcc_map_array[@CH_CFG_TYPE2_CVCC_MAP_ARRAY_SIZE@][2] = { 
@@ -143,28 +149,11 @@ const __attribute__ ((used,used,section(".parameter_config_42")))  uint8_t u8_pl
 const __attribute__ ((used,used,section(".parameter_config_43")))  uint8_t u8_pl_0_cvcc_map_nums = 0U;
 const __attribute__ ((used,used,section(".parameter_config_44")))  uint8_t u8_pl_0_unlock_lock_offset = 255U;
 
-const __attribute__ ((used,used,section(".parameter_config_45")))  uint8_t u8_pl_cvcc_map_array[18][2] = 
+const __attribute__ ((used,used,section(".parameter_config_45")))  uint8_t u8_pl_cvcc_map_array[@CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE@][2] = 
 { 
-    { 7U, 0U },  /**<   1 - GRILL_POS_1 */
-    { 7U, 1U },  /**<   2 - GRILL_POS_2 */
-    { 7U, 2U },  /**<   3 - GRILL_POS_3 */
-    { 7U, 3U },  /**<   4 - GRILL_POS_4 */
-    { 7U, 4U },  /**<   5 - GRILL_POS_5 */
-    { 7U, 5U },  /**<   6 - GRILL_POS_6 */
-    { 7U, 6U },  /**<   7 - GRILL_POS_7 */
-    { 7U, 7U },  /**<   8 - GRILL_POS_8 */
-    { 7U, 8U },  /**<   9 - GRILL_POS_9 */
-    { 8U, 0U },  /**<  10 - GRILL_POS_1 */
-    { 8U, 1U },  /**<  11 - GRILL_POS_2 */
-    { 8U, 2U },  /**<  12 - GRILL_POS_3 */
-    { 8U, 3U },  /**<  13 - GRILL_POS_4 */
-    { 8U, 4U },  /**<  14 - GRILL_POS_5 */
-    { 8U, 5U },  /**<  15 - GRILL_POS_6 */
-    { 8U, 6U },  /**<  16 - GRILL_POS_7 */
-    { 8U, 7U },  /**<  17 - GRILL_POS_8 */
-    { 8U, 8U },  /**<  18 - GRILL_POS_9 */
+@CH_CFG_TYPE8_CVCC_MAP_ROWS@
 };
-const __attribute__ ((used,used,section(".parameter_config_46")))  uint8_t u8_pl_cvcc_map_nums = @PL_ONLY_LED_NUMS@U;
+const __attribute__ ((used,used,section(".parameter_config_46")))  uint8_t u8_pl_cvcc_map_nums = @CH_CFG_TYPE8_CVCC_MAP_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_47")))  uint8_t u8_pl_cvcc_current = 30U;
 const __attribute__ ((used,used,section(".parameter_config_48")))  uint8_t u8_pl_unlock_lock_offset = 36U;
 const __attribute__ ((used,used,section(".parameter_config_49")))  uint8_t u8_pl_duty_cfg = 20U;

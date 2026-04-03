@@ -49,6 +49,14 @@ SCALAR_DEFAULTS = {
     "CH_CFG_TYPE3_CVCC_MAP_NUMS": 0,
     "CH_CFG_TYPE4_CVCC_MAP_ARRAY_SIZE": 2,
     "CH_CFG_TYPE4_CVCC_MAP_NUMS": 0,
+    "CH_CFG_TYPE5_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE5_CVCC_MAP_NUMS": 0,
+    "CH_CFG_TYPE6_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE6_CVCC_MAP_NUMS": 0,
+    "CH_CFG_TYPE7_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE7_CVCC_MAP_NUMS": 0,
+    "CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE8_CVCC_MAP_NUMS": 0,
 }
 CVCC_OUTPUT_VOLTAGE_CONFIGS = (
     ("5V0", 68, "5.0V"),
@@ -531,6 +539,151 @@ def build_ch_cfg_type4_placeholders(
         "CH_CFG_TYPE4_CVCC_MAP_ARRAY_SIZE": type4_count if type4_count else 2,
         "CH_CFG_TYPE4_CVCC_MAP_ROWS": rows,
         "CH_CFG_TYPE4_CVCC_MAP_NUMS": type4_count,
+    }
+
+
+def build_ch_cfg_drl_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+    *,
+    config_type: int,
+    array_size_name: str,
+    rows_name: str,
+    nums_name: str,
+) -> dict[str, Any]:
+    placeholder_names = {array_size_name, rows_name, nums_name}
+    if not any(name in required_placeholders for name in placeholder_names):
+        return {}
+
+    ch_cfg_payload = require_excel_payload(
+        excel_payloads,
+        "CH_Cfg",
+        purpose=f"生成 CH_Cfg type{config_type} 通道映射占位符",
+    )
+    ic_payloads = require_dict(ch_cfg_payload, "ics", "CH_Cfg.json")
+
+    entries: list[tuple[int, int]] = []
+    for ic_name, channels in sorted(
+        ic_payloads.items(),
+        key=lambda item: parse_ch_cfg_index(item[0], "IC"),
+        reverse=True,
+    ):
+        if not isinstance(channels, dict):
+            raise ValueError(f"CH_Cfg.json 的 {ic_name} 不是对象。")
+        ic_index = parse_ch_cfg_index(ic_name, "IC")
+        for channel_name, channel_config_type in sorted(
+            channels.items(),
+            key=lambda item: parse_ch_cfg_index(item[0], "CH"),
+            reverse=True,
+        ):
+            if channel_config_type != config_type:
+                continue
+            channel_index = parse_ch_cfg_index(channel_name, "CH")
+            entries.append((ic_index, channel_index))
+
+    entry_count = len(entries)
+    if not entries:
+        rows = "    /* UNUSED */"
+    else:
+        rows = "\n".join(
+            f"    {{ {ic_index:2d}U, {channel_index:2d}U }}, /**< {entry_index:2d} - DRL_{entry_count - entry_index + 1:02d} */"
+            for entry_index, (ic_index, channel_index) in enumerate(entries, start=1)
+        )
+
+    return {
+        array_size_name: entry_count if entry_count else 2,
+        rows_name: rows,
+        nums_name: entry_count,
+    }
+
+
+def build_ch_cfg_type5_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+) -> dict[str, Any]:
+    return build_ch_cfg_drl_placeholders(
+        excel_payloads,
+        required_placeholders,
+        config_type=5,
+        array_size_name="CH_CFG_TYPE5_CVCC_MAP_ARRAY_SIZE",
+        rows_name="CH_CFG_TYPE5_CVCC_MAP_ROWS",
+        nums_name="CH_CFG_TYPE5_CVCC_MAP_NUMS",
+    )
+
+
+def build_ch_cfg_type6_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+) -> dict[str, Any]:
+    return build_ch_cfg_drl_placeholders(
+        excel_payloads,
+        required_placeholders,
+        config_type=6,
+        array_size_name="CH_CFG_TYPE6_CVCC_MAP_ARRAY_SIZE",
+        rows_name="CH_CFG_TYPE6_CVCC_MAP_ROWS",
+        nums_name="CH_CFG_TYPE6_CVCC_MAP_NUMS",
+    )
+
+
+def build_ch_cfg_type7_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+) -> dict[str, Any]:
+    return build_ch_cfg_drl_placeholders(
+        excel_payloads,
+        required_placeholders,
+        config_type=7,
+        array_size_name="CH_CFG_TYPE7_CVCC_MAP_ARRAY_SIZE",
+        rows_name="CH_CFG_TYPE7_CVCC_MAP_ROWS",
+        nums_name="CH_CFG_TYPE7_CVCC_MAP_NUMS",
+    )
+
+
+def build_ch_cfg_type8_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+) -> dict[str, Any]:
+    placeholder_names = {
+        "CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE",
+        "CH_CFG_TYPE8_CVCC_MAP_ROWS",
+        "CH_CFG_TYPE8_CVCC_MAP_NUMS",
+    }
+    if not any(name in required_placeholders for name in placeholder_names):
+        return {}
+
+    ch_cfg_payload = require_excel_payload(excel_payloads, "CH_Cfg", purpose="生成 CH_Cfg type8 通道映射占位符")
+    ic_payloads = require_dict(ch_cfg_payload, "ics", "CH_Cfg.json")
+
+    type8_entries: list[tuple[int, int]] = []
+    for ic_name, channels in sorted(
+        ic_payloads.items(),
+        key=lambda item: parse_ch_cfg_index(item[0], "IC"),
+    ):
+        if not isinstance(channels, dict):
+            raise ValueError(f"CH_Cfg.json 的 {ic_name} 不是对象。")
+        ic_index = parse_ch_cfg_index(ic_name, "IC")
+        for channel_name, config_type in sorted(
+            channels.items(),
+            key=lambda item: parse_ch_cfg_index(item[0], "CH"),
+        ):
+            if config_type != 8:
+                continue
+            channel_index = parse_ch_cfg_index(channel_name, "CH")
+            type8_entries.append((ic_index, channel_index))
+
+    type8_count = len(type8_entries)
+    if not type8_entries:
+        rows = "    /* UNUSED */"
+    else:
+        rows = "\n".join(
+            f"    {{ {ic_index:2d}U, {channel_index:2d}U }}, /**< {entry_index:2d} - PL_{entry_index:02d} */"
+            for entry_index, (ic_index, channel_index) in enumerate(type8_entries, start=1)
+        )
+
+    return {
+        "CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE": type8_count if type8_count else 2,
+        "CH_CFG_TYPE8_CVCC_MAP_ROWS": rows,
+        "CH_CFG_TYPE8_CVCC_MAP_NUMS": type8_count,
     }
 
 
@@ -1551,6 +1704,10 @@ def build_render_context(
     placeholders.update(build_ch_cfg_type2_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_ch_cfg_type3_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_ch_cfg_type4_placeholders(excel_payloads, required_placeholders))
+    placeholders.update(build_ch_cfg_type5_placeholders(excel_payloads, required_placeholders))
+    placeholders.update(build_ch_cfg_type6_placeholders(excel_payloads, required_placeholders))
+    placeholders.update(build_ch_cfg_type7_placeholders(excel_payloads, required_placeholders))
+    placeholders.update(build_ch_cfg_type8_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_cvcc_output_voltage_placeholders(kconfig_payload, required_placeholders))
     placeholders.update(build_chcm_cfg_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_motor_placeholders(excel_payloads, required_placeholders))

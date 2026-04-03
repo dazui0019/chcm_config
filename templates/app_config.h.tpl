@@ -269,18 +269,18 @@ extern const __attribute__ ((section(".parameter_config_18")))  uint8_t u8_unloc
 /* 各恒流芯片每个通道输出电流值K系数 */
 extern const __attribute__ ((section(".parameter_config_19"))) uint8_t u8_cvcc_k_array[USED_CVCC_CHIP_NUMS][USED_CVCC_CHANNEL_NUMS];
 
-/* 恒流类型4输出通道: 与TI互斥关闭, 单独的DRL通道 */
-extern const __attribute__ ((section(".parameter_config_20"))) uint8_t u8_drl_0_cvcc_map_array[2][2];
+/* 恒流类型5输出通道: 与TI互斥关闭, 单独的DRL通道 */
+extern const __attribute__ ((section(".parameter_config_20"))) uint8_t u8_drl_0_cvcc_map_array[@CH_CFG_TYPE5_CVCC_MAP_ARRAY_SIZE@][2];
 extern const __attribute__ ((section(".parameter_config_21"))) uint8_t u8_drl_0_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_22"))) uint8_t u8_drl_0_unlock_lock_offset;
 
 /* 恒流类型6输出通道:与TI互斥降额, 单独的DRL通道 */
-extern const __attribute__ ((section(".parameter_config_23"))) uint8_t u8_drl_1_cvcc_map_array[2][2];
+extern const __attribute__ ((section(".parameter_config_23"))) uint8_t u8_drl_1_cvcc_map_array[@CH_CFG_TYPE6_CVCC_MAP_ARRAY_SIZE@][2];
 extern const __attribute__ ((section(".parameter_config_24"))) uint8_t u8_drl_1_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_25"))) uint8_t u8_drl_1_unlock_lock_offset;
 
-/* 恒流类型8输出通道: 单独的DRL通道 */
-extern const __attribute__ ((section(".parameter_config_26"))) uint8_t u8_drl_2_cvcc_map_array[2][2];
+/* 恒流类型7输出通道: 单独的DRL通道 */
+extern const __attribute__ ((section(".parameter_config_26"))) uint8_t u8_drl_2_cvcc_map_array[@CH_CFG_TYPE7_CVCC_MAP_ARRAY_SIZE@][2];
 extern const __attribute__ ((section(".parameter_config_27"))) uint8_t u8_drl_2_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_28"))) uint8_t u8_drl_2_unlock_lock_offset;
 
@@ -309,8 +309,8 @@ extern const __attribute__ ((section(".parameter_config_42"))) uint8_t u8_pl_0_c
 extern const __attribute__ ((section(".parameter_config_43"))) uint8_t u8_pl_0_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_44"))) uint8_t u8_pl_0_unlock_lock_offset;
 
-/* 恒流类型9输出通道: 单独的PL通道 */
-extern const __attribute__ ((section(".parameter_config_45"))) uint8_t u8_pl_cvcc_map_array[18][2];
+/* 恒流类型8输出通道: 单独的PL通道 */
+extern const __attribute__ ((section(".parameter_config_45"))) uint8_t u8_pl_cvcc_map_array[@CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE@][2];
 extern const __attribute__ ((section(".parameter_config_46"))) uint8_t u8_pl_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_47"))) uint8_t u8_pl_cvcc_current;
 extern const __attribute__ ((section(".parameter_config_48"))) uint8_t u8_pl_unlock_lock_offset;
