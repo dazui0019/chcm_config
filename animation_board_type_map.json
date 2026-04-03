@@ -1,0 +1,8 @@
+{
+  "source": "Unlock Mode1",
+  "board_type_map": {
+    "DRL/POS/ADS_R": 3,
+    "DRL/POS/TI_R": 2,
+    "GRILL_R": 8
+  }
+}

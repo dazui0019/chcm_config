@@ -12,6 +12,7 @@ KCONFIG_DEFAULT = Path("Kconfig")
 OUTPUT_DIR_DEFAULT = Path("output")
 HEADER_TEMPLATE_DEFAULT = Path("templates") / "app_config.h.tpl"
 SOURCE_TEMPLATE_DEFAULT = Path("templates") / "app_config.c.tpl"
+ANIMATION_BOARD_TYPE_MAP_DEFAULT = Path("animation_board_type_map.json")
 ANSI_RED = "\033[31m"
 ANSI_BOLD = "\033[1m"
 ANSI_RESET = "\033[0m"
@@ -70,6 +71,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=SOURCE_TEMPLATE_DEFAULT,
         help=f"Source template path. Default: {SOURCE_TEMPLATE_DEFAULT}",
     )
+    parser.add_argument(
+        "--animation-board-type-map",
+        type=Path,
+        default=ANIMATION_BOARD_TYPE_MAP_DEFAULT,
+        help=f"Animation board/type map JSON path. Default: {ANIMATION_BOARD_TYPE_MAP_DEFAULT}",
+    )
     return parser
 
 
@@ -114,6 +121,8 @@ def main() -> None:
         str(args.header_template),
         "--source-template",
         str(args.source_template),
+        "--animation-board-type-map",
+        str(args.animation_board_type_map),
         "--output",
         str(render_context),
     ]

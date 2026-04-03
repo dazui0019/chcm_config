@@ -14,6 +14,7 @@ KCONFIG_JSON_DEFAULT = INPUT_DIR_DEFAULT / "Kconfig.json"
 OUTPUT_DEFAULT = INPUT_DIR_DEFAULT / "render_context.json"
 HEADER_TEMPLATE_DEFAULT = Path("templates") / "app_config.h.tpl"
 SOURCE_TEMPLATE_DEFAULT = Path("templates") / "app_config.c.tpl"
+ANIMATION_BOARD_TYPE_MAP_DEFAULT = Path("animation_board_type_map.json")
 OUTPUT_SCHEMA_VERSION = 1
 PLACEHOLDER_PATTERN = re.compile(r"@([A-Z0-9_]+)@")
 BLOCK_PLACEHOLDER_TOKENS = ("DEFINITION", "DEFINITIONS", "DECLARATION", "DECLARATIONS", "MACRO", "MACROS")
@@ -62,6 +63,15 @@ SCALAR_DEFAULTS = {
     "CH_CFG_TYPE9_CVCC_MAP_ARRAY_SIZE": 2,
     "CH_CFG_TYPE9_CVCC_MAP_NUMS": 0,
     "CH_CFG_TYPE9_FIXED_CURRENT": 0,
+    "CH_CFG_TYPE0_UNLOCK_LOCK_OFFSET": 255,
+    "CH_CFG_TYPE2_UNLOCK_LOCK_OFFSET": 255,
+    "CH_CFG_TYPE3_UNLOCK_LOCK_OFFSET": 255,
+    "CH_CFG_TYPE4_UNLOCK_LOCK_OFFSET": 255,
+    "CH_CFG_TYPE5_UNLOCK_LOCK_OFFSET": 255,
+    "CH_CFG_TYPE6_UNLOCK_LOCK_OFFSET": 255,
+    "CH_CFG_TYPE7_UNLOCK_LOCK_OFFSET": 255,
+    "CH_CFG_TYPE8_UNLOCK_LOCK_OFFSET": 255,
+    "PL_0_UNLOCK_LOCK_OFFSET": 255,
 }
 CVCC_OUTPUT_VOLTAGE_CONFIGS = (
     ("5V0", 68, "5.0V"),
@@ -1488,6 +1498,231 @@ def format_signal_animation_rows(row_frames: list[tuple[list[int], int]]) -> str
     return "\n".join(lines)
 
 
+def load_animation_board_type_map(path: Path) -> dict[str, Any]:
+    payload = load_json(path)
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path} 必须是 JSON 对象。")
+
+    source = payload.get("source")
+    if not isinstance(source, str) or not source.strip():
+        raise ValueError(f"{path} 缺少有效的 source。")
+
+    board_type_map = payload.get("board_type_map")
+    if not isinstance(board_type_map, dict):
+        raise ValueError(f"{path} 缺少对象字段 board_type_map。")
+
+    normalized_map: dict[str, int] = {}
+    for board_name, type_value in board_type_map.items():
+        if not isinstance(board_name, str) or not board_name.strip():
+            raise ValueError(f"{path} 中存在无效灯板名 {board_name!r}。")
+        if isinstance(type_value, bool) or not isinstance(type_value, int):
+            raise ValueError(f"{path} 中 {board_name!r} 的 type 必须是整数。")
+        normalized_map[board_name.strip()] = type_value
+
+    return {
+        "source": source.strip(),
+        "board_type_map": normalized_map,
+    }
+
+
+def build_animation_board_types_domain(
+    signal_animation: dict[str, Any],
+    animation_board_type_map: dict[str, Any],
+) -> dict[str, Any]:
+    source = animation_board_type_map["source"]
+    board_type_map = animation_board_type_map["board_type_map"]
+
+    parsed = parse_raw_signal_animation_sheet_name(source)
+    if parsed is None:
+        raise ValueError(f"动画映射 source {source!r} 无法解析，请使用类似 'Unlock Mode1' 的 sheet 名。")
+    kind_name, mode_index = parsed
+    kind_domain = signal_animation.get(kind_name)
+    if not isinstance(kind_domain, dict):
+        raise ValueError(f"signal_animation 缺少 {kind_name} 配置。")
+    mode_payloads = kind_domain.get("mode_payloads")
+    if not isinstance(mode_payloads, dict):
+        raise ValueError(f"signal_animation.{kind_name}.mode_payloads 配置无效。")
+    source_payload = mode_payloads.get(mode_index)
+    if not isinstance(source_payload, dict):
+        raise ValueError(f"signal_animation 中缺少 {source} 动画数据。")
+
+    columns, _frames, _column_count = validate_raw_signal_animation_payload(source, source_payload)
+
+    by_board: dict[str, dict[str, Any]] = {}
+    unmapped_boards: set[str] = set()
+    for column_payload in columns:
+        section_name = column_payload.get("section_name")
+        if not isinstance(section_name, str) or not section_name.strip():
+            raise ValueError(f"{source} 存在缺少 section_name 的动画列，无法建立灯板映射。")
+        board_name = section_name.strip()
+        if board_name not in board_type_map:
+            unmapped_boards.add(board_name)
+            continue
+
+        board_entry = by_board.setdefault(
+            board_name,
+            {
+                "type": int(board_type_map[board_name]),
+                "column_ids": [],
+                "column_count": 0,
+                "start_column_id": None,
+            },
+        )
+        column_id = column_payload.get("column_id")
+        if isinstance(column_id, bool) or not isinstance(column_id, int):
+            raise ValueError(f"{source} 的 {board_name} 存在无效 column_id。")
+        board_entry["column_ids"].append(column_id)
+        board_entry["column_count"] += 1
+        current_start_column_id = board_entry["start_column_id"]
+        if current_start_column_id is None or column_id < current_start_column_id:
+            board_entry["start_column_id"] = column_id
+
+    if unmapped_boards:
+        missing = ", ".join(sorted(unmapped_boards))
+        raise ValueError(f"{source} 中存在未映射的灯板，请补充 {ANIMATION_BOARD_TYPE_MAP_DEFAULT}: {missing}。")
+
+    return {
+        "source": source,
+        "board_type_map": board_type_map,
+        "by_board": by_board,
+    }
+
+
+def build_animation_offset_candidates_domain(
+    signal_animation: dict[str, Any],
+    animation_board_types: dict[str, Any],
+) -> dict[str, Any]:
+    source = animation_board_types["source"]
+    parsed = parse_raw_signal_animation_sheet_name(source)
+    if parsed is None:
+        raise ValueError(f"动画映射 source {source!r} 无法解析。")
+    kind_name, mode_index = parsed
+    kind_domain = signal_animation.get(kind_name)
+    if not isinstance(kind_domain, dict):
+        raise ValueError(f"signal_animation 缺少 {kind_name} 配置。")
+    mode_payloads = kind_domain.get("mode_payloads")
+    if not isinstance(mode_payloads, dict):
+        raise ValueError(f"signal_animation.{kind_name}.mode_payloads 配置无效。")
+    source_payload = mode_payloads.get(mode_index)
+    if not isinstance(source_payload, dict):
+        raise ValueError(f"signal_animation 中缺少 {source} 动画数据。")
+
+    columns, frames, _column_count = validate_raw_signal_animation_payload(source, source_payload)
+    first_lit_by_column: dict[int, tuple[int, int]] = {}
+    for frame_index, frame in enumerate(frames):
+        values = frame.get("values")
+        if not isinstance(values, list):
+            raise ValueError(f"{source} 存在无效帧 values。")
+        time_ms = frame.get("time_ms")
+        if isinstance(time_ms, bool) or not isinstance(time_ms, int):
+            raise ValueError(f"{source} 存在无效 time_ms。")
+        for column_index, value in enumerate(values):
+            if column_index in first_lit_by_column:
+                continue
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise ValueError(f"{source} 第 {frame_index} 帧存在非整数亮度值。")
+            if value != 0:
+                first_lit_by_column[column_index] = (frame_index, time_ms)
+
+    columns_by_id = {
+        int(column_payload["column_id"]): column_payload
+        for column_payload in columns
+        if isinstance(column_payload.get("column_id"), int) and not isinstance(column_payload.get("column_id"), bool)
+    }
+
+    by_type: dict[str, dict[str, Any]] = {}
+    for board_name, board_payload in animation_board_types["by_board"].items():
+        type_key = str(board_payload["type"])
+        type_entry = by_type.setdefault(
+            type_key,
+            {
+                "board_names": [],
+                "matched_columns": [],
+                "first_lit_frame": None,
+                "first_lit_time_ms": None,
+                "candidate_offset": 255,
+            },
+        )
+        type_entry["board_names"].append(board_name)
+        for column_id in board_payload["column_ids"]:
+            column_payload = columns_by_id.get(column_id)
+            if column_payload is None:
+                raise ValueError(f"{source} 中缺少 column_id={column_id} 的列配置。")
+            first_lit = first_lit_by_column.get(column_id)
+            type_entry["matched_columns"].append(
+                {
+                    "column_id": column_id,
+                    "output_name": column_payload.get("output_name", ""),
+                    "section_name": column_payload.get("section_name", ""),
+                    "first_lit_frame": None if first_lit is None else first_lit[0],
+                    "first_lit_time_ms": None if first_lit is None else first_lit[1],
+                }
+            )
+            if first_lit is None:
+                continue
+            first_frame, first_time_ms = first_lit
+            current_first_frame = type_entry["first_lit_frame"]
+            if current_first_frame is None or first_frame < current_first_frame:
+                type_entry["first_lit_frame"] = first_frame
+                type_entry["first_lit_time_ms"] = first_time_ms
+                type_entry["candidate_offset"] = first_frame
+
+        type_entry["board_names"].sort()
+        type_entry["matched_columns"].sort(key=lambda item: int(item["column_id"]))
+
+    return {
+        "source": source,
+        "by_type": by_type,
+    }
+
+
+def build_animation_start_column_placeholders(
+    animation_board_types: dict[str, Any],
+    required_placeholders: set[str],
+) -> dict[str, int]:
+    placeholders = {
+        "CH_CFG_TYPE0_UNLOCK_LOCK_OFFSET": 255,
+        "CH_CFG_TYPE2_UNLOCK_LOCK_OFFSET": 255,
+        "CH_CFG_TYPE3_UNLOCK_LOCK_OFFSET": 255,
+        "CH_CFG_TYPE4_UNLOCK_LOCK_OFFSET": 255,
+        "CH_CFG_TYPE5_UNLOCK_LOCK_OFFSET": 255,
+        "CH_CFG_TYPE6_UNLOCK_LOCK_OFFSET": 255,
+        "CH_CFG_TYPE7_UNLOCK_LOCK_OFFSET": 255,
+        "CH_CFG_TYPE8_UNLOCK_LOCK_OFFSET": 255,
+        "PL_0_UNLOCK_LOCK_OFFSET": 255,
+    }
+    placeholder_by_type = {
+        0: "CH_CFG_TYPE0_UNLOCK_LOCK_OFFSET",
+        2: "CH_CFG_TYPE2_UNLOCK_LOCK_OFFSET",
+        3: "CH_CFG_TYPE3_UNLOCK_LOCK_OFFSET",
+        4: "CH_CFG_TYPE4_UNLOCK_LOCK_OFFSET",
+        5: "CH_CFG_TYPE5_UNLOCK_LOCK_OFFSET",
+        6: "CH_CFG_TYPE6_UNLOCK_LOCK_OFFSET",
+        7: "CH_CFG_TYPE7_UNLOCK_LOCK_OFFSET",
+        8: "CH_CFG_TYPE8_UNLOCK_LOCK_OFFSET",
+    }
+
+    for board_payload in animation_board_types.get("by_board", {}).values():
+        type_id = board_payload.get("type")
+        start_column_id = board_payload.get("start_column_id")
+        if isinstance(type_id, bool) or not isinstance(type_id, int):
+            raise ValueError("animation_board_types 中存在无效 type。")
+        if isinstance(start_column_id, bool) or not isinstance(start_column_id, int):
+            continue
+        placeholder_name = placeholder_by_type.get(type_id)
+        if placeholder_name is None:
+            continue
+        current_value = placeholders[placeholder_name]
+        if start_column_id < current_value:
+            placeholders[placeholder_name] = start_column_id
+
+    return {
+        name: value
+        for name, value in placeholders.items()
+        if name in required_placeholders
+    }
+
+
 def format_e01_ads_animation_rows(frames: list[dict[str, Any]], column_count: int) -> str:
     normalized_frames: list[tuple[list[int], int]] = []
 
@@ -1934,6 +2169,7 @@ def build_render_context(
     excel_payloads: dict[str, dict[str, Any]],
     kconfig_payload: dict[str, Any],
     required_placeholders: set[str],
+    animation_board_type_map: dict[str, Any],
 ) -> dict[str, Any]:
     ch_cfg_channel_types, current_effective_channels = validate_channel_config_consistency(excel_payloads)
     placeholders = {**SCALAR_DEFAULTS, **extract_scalar_placeholders(kconfig_payload, excel_payloads)}
@@ -1942,8 +2178,11 @@ def build_render_context(
     ch_cfg_channel_counts = build_ch_cfg_channel_counts_domain(excel_payloads)
     ch_cfg_fixed_currents = build_ch_cfg_fixed_currents_domain(excel_payloads, ch_cfg_channel_types, current_effective_channels)
     signal_animation = build_raw_signal_animation_domain(excel_payloads)
+    animation_board_types = build_animation_board_types_domain(signal_animation, animation_board_type_map)
+    animation_offset_candidates = build_animation_offset_candidates_domain(signal_animation, animation_board_types)
     placeholders.update(build_cvcc_cfg_placeholders(cvcc_cfg, required_placeholders))
     placeholders.update(build_raw_signal_animation_placeholders(signal_animation, required_placeholders))
+    placeholders.update(build_animation_start_column_placeholders(animation_board_types, required_placeholders))
     placeholders.update(build_ti_sequential_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_ch_cfg_type0_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_ch_cfg_type2_placeholders(excel_payloads, required_placeholders))
@@ -1974,6 +2213,8 @@ def build_render_context(
         "ch_cfg_channel_counts": ch_cfg_channel_counts,
         "ch_cfg_fixed_currents": ch_cfg_fixed_currents,
         "signal_animation": signal_animation,
+        "animation_board_types": animation_board_types,
+        "animation_offset_candidates": animation_offset_candidates,
         "excel": excel_payloads,
         "kconfig": kconfig_payload,
     }
@@ -2011,6 +2252,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=OUTPUT_DEFAULT,
         help=f"Output render context path. Default: {OUTPUT_DEFAULT}",
     )
+    parser.add_argument(
+        "--animation-board-type-map",
+        type=Path,
+        default=ANIMATION_BOARD_TYPE_MAP_DEFAULT,
+        help=f"Animation board/type map JSON path. Default: {ANIMATION_BOARD_TYPE_MAP_DEFAULT}",
+    )
     return parser
 
 
@@ -2026,9 +2273,15 @@ def main() -> None:
         excluded_files = {args.kconfig_json.resolve(), args.output.resolve()}
         excel_payloads = load_excel_jsons(args.input_dir, excluded_files)
         kconfig_payload = load_json(args.kconfig_json)
+        animation_board_type_map = load_animation_board_type_map(args.animation_board_type_map)
         required_placeholders = load_required_placeholders(args.header_template, args.source_template)
 
-        payload = build_render_context(excel_payloads, kconfig_payload, required_placeholders)
+        payload = build_render_context(
+            excel_payloads,
+            kconfig_payload,
+            required_placeholders,
+            animation_board_type_map,
+        )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(render_json_compact(payload) + "\n", encoding="utf-8")
     except Exception as exc:
@@ -2037,6 +2290,7 @@ def main() -> None:
 
     print(f"Input dir: {args.input_dir}")
     print(f"Kconfig JSON: {args.kconfig_json}")
+    print(f"Animation board/type map: {args.animation_board_type_map}")
     print(f"Wrote {args.output}")
 
 
