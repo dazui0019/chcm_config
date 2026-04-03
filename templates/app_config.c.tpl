@@ -131,7 +131,7 @@ const __attribute__ ((used,used,section(".parameter_config_29")))  uint8_t u8_dr
 @CH_CFG_TYPE2_CVCC_MAP_ROWS@
 };
 const __attribute__ ((used,used,section(".parameter_config_30")))  uint8_t u8_drl_pl_0_cvcc_map_nums = @CH_CFG_TYPE2_CVCC_MAP_NUMS@U;
-const __attribute__ ((used,used,section(".parameter_config_31")))  uint8_t u8_drl_pl_0_pl_duty = 20U;
+const __attribute__ ((used,used,section(".parameter_config_31")))  uint8_t u8_drl_pl_0_pl_duty = @CHCM_CFG_ITEM_11_WORD1@U;
 const __attribute__ ((used,used,section(".parameter_config_32")))  uint8_t u8_drl_pl_0_unlock_lock_offset = @CH_CFG_TYPE2_UNLOCK_LOCK_OFFSET@U;
 
 // type 3: DRL/PL共用通道，在TI使能且有DRL/PL使能时，DRL/PL需要降至PL亮度；在无TI使能时，按照PL＞DRL进行点灯
@@ -139,7 +139,7 @@ const __attribute__ ((used,used,section(".parameter_config_33")))  uint8_t u8_dr
 @CH_CFG_TYPE3_CVCC_MAP_ROWS@
 };
 const __attribute__ ((used,used,section(".parameter_config_34")))  uint8_t u8_drl_pl_1_cvcc_map_nums = @CH_CFG_TYPE3_CVCC_MAP_NUMS@U;
-const __attribute__ ((used,used,section(".parameter_config_35")))  uint8_t u8_drl_pl_1_pl_duty = 12U;
+const __attribute__ ((used,used,section(".parameter_config_35")))  uint8_t u8_drl_pl_1_pl_duty = @CHCM_CFG_ITEM_11_WORD1@U;
 const __attribute__ ((used,used,section(".parameter_config_36")))  uint8_t u8_drl_pl_1_unlock_lock_offset = @CH_CFG_TYPE3_UNLOCK_LOCK_OFFSET@U;
 
 // type 4: DRL/PL共用通道，TI使能且有DRL/PL使能时，依照PL＞DRL优先级判断点亮灯光
@@ -147,7 +147,7 @@ const __attribute__ ((used,used,section(".parameter_config_37")))  uint8_t u8_dr
 @CH_CFG_TYPE4_CVCC_MAP_ROWS@
 };
 const __attribute__ ((used,used,section(".parameter_config_38")))  uint8_t u8_drl_pl_2_cvcc_map_nums = @CH_CFG_TYPE4_CVCC_MAP_NUMS@U;
-const __attribute__ ((used,used,section(".parameter_config_39")))  uint8_t u8_drl_pl_2_pl_duty = 12U;
+const __attribute__ ((used,used,section(".parameter_config_39")))  uint8_t u8_drl_pl_2_pl_duty = @CHCM_CFG_ITEM_11_WORD1@U;
 const __attribute__ ((used,used,section(".parameter_config_40")))  uint8_t u8_drl_pl_2_unlock_lock_offset = @CH_CFG_TYPE4_UNLOCK_LOCK_OFFSET@U;
 
 const __attribute__ ((used,used,section(".parameter_config_41")))  uint8_t u8_hb_adb_mode = 0U; // 配置当前HB是否为ADB模式
@@ -165,7 +165,7 @@ const __attribute__ ((used,used,section(".parameter_config_45")))  uint8_t u8_pl
 const __attribute__ ((used,used,section(".parameter_config_46")))  uint8_t u8_pl_cvcc_map_nums = @CH_CFG_TYPE8_CVCC_MAP_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_47")))  uint8_t u8_pl_cvcc_current = @CH_CFG_TYPE8_FIXED_CURRENT@U;
 const __attribute__ ((used,used,section(".parameter_config_48")))  uint8_t u8_pl_unlock_lock_offset = @CH_CFG_TYPE8_UNLOCK_LOCK_OFFSET@U;
-const __attribute__ ((used,used,section(".parameter_config_49")))  uint8_t u8_pl_duty_cfg = 20U;
+const __attribute__ ((used,used,section(".parameter_config_49")))  uint8_t u8_pl_duty_cfg = @CHCM_CFG_ITEM_11_WORD1@U;
 
 // type 1: TI单独通道，当TI使能=1时，点亮该通道
 const __attribute__ ((used,used,section(".parameter_config_50")))  uint8_t u8_ti_cvcc_map_array[@CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE@][2] = { 
