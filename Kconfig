@@ -61,18 +61,23 @@ choice
 endchoice
 
 choice
-  prompt "CVCC UART Channel"
-  default CVCC_UART_CHANNEL_SUB_UARTCAN_1
+  prompt "Select CVCC UART Channel"
+  default CVCC_UART_UARTCAN_1
 
-  config CVCC_UART_CHANNEL_SUB_UARTCAN_0
+  config CVCC_UART_UARTCAN_0
     bool "SUB_UARTCAN_0"
 
-  config CVCC_UART_CHANNEL_SUB_UARTCAN_1
+  config CVCC_UART_UARTCAN_1
     bool "SUB_UARTCAN_1"
 
-  config CVCC_UART_CHANNEL_SUB_UARTCAN_2
+  config CVCC_UART_UARTCAN_2
     bool "SUB_UARTCAN_2"
 endchoice
+config USED_CVCC_UARTCHN
+  int
+  default 0 if CVCC_UART_UARTCAN_0
+  default 1 if CVCC_UART_UARTCAN_1
+  default 1 if CVCC_UART_UARTCAN_2
 
 menu "CVCC Output Voltage Table"
 
