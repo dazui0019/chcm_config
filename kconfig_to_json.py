@@ -103,6 +103,7 @@ def build_output_payload(kconfig, kconfig_path: Path, config_path: Path) -> dict
         "PROJECT_NAME": project_name or "PROJECT_A_SMALL",
         "SYSTEM_COM_VERION": version_placeholder or "VERSION_V5",
         "EEA_X": version_placeholder or "VERSION_V5",
+        "HB_LB_ANIMATION_ENABLE": symbols.get("HB_LB_ANIMATION_ENABLE", {}).get("value", False),
     }
 
     return {

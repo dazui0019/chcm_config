@@ -347,7 +347,7 @@ const __attribute__ ((used,used,section(".parameter_config_53"))) uint8_t g_used
 };
 #endif
 
-const __attribute__ ((used,used,section(".parameter_config_62"))) uint8_t u8_lb_hb_welcom_en = 0;
+const __attribute__ ((used,used,section(".parameter_config_62"))) uint8_t u8_lb_hb_welcom_en = @HB_LB_ANIMATION_ENABLE@U;
 
 /** Motor configuration table */
 const __attribute__ ((used,used,section(".parameter_config_60"))) MOTOR_CONIFICTION_TABLE_T motor_config_infomation = {
