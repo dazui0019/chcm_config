@@ -505,7 +505,7 @@ render context JSON 推荐结构可参考 [templates/README.md](templates/README
 
 ## TODO
 
-- [ ] 替换type 5 - type 9的通道配置
+- [ ] 整理替换数据来源
 
 ### Kconfig
 

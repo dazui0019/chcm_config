@@ -193,7 +193,6 @@ const __attribute__ ((used,used,section(".parameter_config_58")))  uint8_t u8_ti
 
 const __attribute__ ((used,used,section(".parameter_config_59")))  uint8_t u8_drl_ntc_default_derate = 100U;
 
-#if 1
 const __attribute__ ((used,used,section(".parameter_config_61")))  CHCM_Cfg_T CHCM_Cfg[CHCM_CFG_IDX_MAX] = {
     {@CHCM_CFG_ITEM_0_WORD0@U, @CHCM_CFG_ITEM_0_WORD1@U, @CHCM_CFG_ITEM_0_WORD2@U}, /**< @CHCM_CFG_ITEM_0_COMMENT@ */
     {@CHCM_CFG_ITEM_1_WORD0@U, @CHCM_CFG_ITEM_1_WORD1@U, @CHCM_CFG_ITEM_1_WORD2@U}, /**< @CHCM_CFG_ITEM_1_COMMENT@ */
@@ -223,129 +222,6 @@ const __attribute__ ((used,used,section(".parameter_config_61")))  CHCM_Cfg_T CH
     {@CHCM_CFG_ITEM_25_WORD0@U, @CHCM_CFG_ITEM_25_WORD1@U, @CHCM_CFG_ITEM_25_WORD2@U}, /**< @CHCM_CFG_ITEM_25_COMMENT@ */
     {@CHCM_CFG_ITEM_26_WORD0@U, @CHCM_CFG_ITEM_26_WORD1@U, @CHCM_CFG_ITEM_26_WORD2@U}, /**< @CHCM_CFG_ITEM_26_COMMENT@ */
 };
-
-#if ( USED_MATRIX_FUNCTION == 1U )
-const __attribute__ ((used,used,section(".parameter_config_49"))) uint8_t g_used_matrix_ic_nums = USED_MATRIX_CHIP_NUMS;
-const __attribute__ ((used,used,section(".parameter_config_50")))APP_Matrix_Cfg_T App_matrix_cfg_L[USED_MATRIX_CHIP_NUMS] = {
-               /** Matrix IC addr,  Matrix IC type,      used_uartchn,     Used switch,   switch_mask */     
-   /**  IC0 */ {               0U,MATRIX_TPS92662A,     SUB_UARTCAN_2,          12U,        0x0fffU },
-   /**  IC1 */ {               1U,MATRIX_TPS92662A,     SUB_UARTCAN_2,          12U,        0x0fffU },
-   /**  IC2 */ {               2U,MATRIX_TPS92662A,     SUB_UARTCAN_2,           8U,        0x00ffU },
-};
-
-const __attribute__ ((used,used,section(".parameter_config_51"))) uint8_t g_used_matrix_led_nums = USED_MATRIX_LED_NUMS;
-
-const __attribute__ ((used,used,section(".parameter_config_52"))) APP_ADB_LED_POS_Cfg_T g_used_matrix_led_id[USED_MATRIX_CHIP_NUMS][16U] = {
-    {
-        {0x00U,  0x00U},/**< matrix led 1  */
-        {0x00U,  0x01U},/**< matrix led 2  */
-        {0x00U,  0x02U},/**< matrix led 3  */
-        {0x00U,  0x03U},/**< matrix led 4  */
-        {0x00U,  0x04U},/**< matrix led 5  */
-        {0x00U,  0x05U},/**< matrix led 6  */
-        {0x00U,  0x06U},/**< matrix led 7  */
-        {0x00U,  0x07U},/**< matrix led 8  */
-        {0x00U,  0x08U},/**< matrix led 9  */
-        {0x00U,  0x09U},/**< matrix led 10 */
-        {0x00U,  0x10U},/**< matrix led 11 */
-        {0x00U,  0x11U},/**< matrix led 12 */
-        {0xffU,  0xffU},/**< not used */
-        {0xffU,  0xffU},/**< not used */
-        {0xffU,  0xffU},/**< not used */
-        {0xffU,  0xffU},/**< not used */
-    },
-    {
-        {0x01U,  0x00U},/**< matrix led 13 */
-        {0x01U,  0x01U},/**< matrix led 14 */
-        {0x01U,  0x02U},/**< matrix led 15 */
-        {0x01U,  0x03U},/**< matrix led 16 */
-        {0x01U,  0x04U},/**< matrix led 17 */
-        {0x01U,  0x05U},/**< matrix led 18 */
-        {0x01U,  0x06U},/**< matrix led 19 */
-        {0x01U,  0x07U},/**< matrix led 20 */
-        {0x01U,  0x08U},/**< matrix led 21 */
-        {0x01U,  0x09U},/**< matrix led 22 */
-        {0x01U,  0x10U},/**< matrix led 23 */
-        {0x01U,  0x11U},/**< matrix led 24 */
-        {0xffU,  0xffU},/**< not used */
-        {0xffU,  0xffU},/**< not used */
-        {0xffU,  0xffU},/**< not used */
-        {0xffU,  0xffU},/**< not used */
-    },
-    {
-        {0x02U,  0x00U},/**< matrix led 25 */
-        {0x02U,  0x01U},/**< matrix led 26 */
-        {0x02U,  0x02U},/**< matrix led 27 */
-        {0x02U,  0x03U},/**< matrix led 28 */
-        {0x02U,  0x04U},/**< matrix led 29 */
-        {0x02U,  0x05U},/**< matrix led 30 */
-        {0x02U,  0x06U},/**< matrix led 31 */
-        {0x02U,  0x07U},/**< matrix led 32 */
-        {0xffU,  0xffU},/**< not used */
-        {0xffU,  0xffU},/**< not used */
-        {0xffU,  0xffU},/**< not used */
-        {0xffU,  0xffU},/**< not used */
-    },
-};
-
-const __attribute__ ((used,used,section(".parameter_config_53"))) uint8_t g_used_matrix_led_k[USED_MATRIX_CHIP_NUMS][16U] = {
-    /**< 0   1   2   3   4   5   6   7   8   9  10  11*/
-    {
-        100U, /**< matrix led 1  */
-        100U, /**< matrix led 2  */
-        100U, /**< matrix led 3  */
-        100U, /**< matrix led 4  */
-        100U, /**< matrix led 5  */
-        100U, /**< matrix led 6  */
-        100U, /**< matrix led 7  */ 
-        100U, /**< matrix led 8  */
-        100U, /**< matrix led 9  */
-        100U, /**< matrix led 10 */
-        100U, /**< matrix led 11 */
-        100U, /**< matrix led 12 */
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-    },
-    {
-        100U, /**< matrix led 13  */
-        100U, /**< matrix led 14  */
-        100U, /**< matrix led 15  */
-        100U, /**< matrix led 16  */
-        100U, /**< matrix led 17  */
-        100U, /**< matrix led 18  */
-        100U, /**< matrix led 19  */ 
-        100U, /**< matrix led 20  */
-        100U, /**< matrix led 21  */
-        100U, /**< matrix led 22  */
-        100U, /**< matrix led 23  */
-        100U, /**< matrix led 24  */
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-    },
-    {
-        100U, /**< matrix led 25  */
-        100U, /**< matrix led 26  */
-        100U, /**< matrix led 27  */
-        100U, /**< matrix led 28  */
-        100U, /**< matrix led 29  */
-        100U, /**< matrix led 30  */
-        100U, /**< matrix led 31  */
-        100U, /**< matrix led 32  */
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-        0xffU, /**< not used */ 
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-        0xffU, /**< not used */
-    }
-};
-#endif
 
 const __attribute__ ((used,used,section(".parameter_config_62"))) uint8_t u8_lb_hb_welcom_en = @HB_LB_ANIMATION_ENABLE@U;
 
@@ -389,5 +265,3 @@ const __attribute__ ((used,used,section(".parameter_config_60"))) MOTOR_CONIFICT
 extern const __attribute__ ((section(".parameter_config_63"))) Loudness_Suncoe_EEA5[LOUDNESS_MAX_IDX] = {
     67, 79, 90, 96, 100, 86, 83, 70, 65
 };
-
-#endif

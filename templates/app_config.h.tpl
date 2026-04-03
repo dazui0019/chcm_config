@@ -15,22 +15,14 @@
 #define VERSION_V4               ( 0U )
 #define VERSION_V5               ( 1U )
 
-#define EEA_X VERSION_V5
+#define EEA_X @SYSTEM_COM_VERION@
 
-#define SYSTEM_COM_VERION        ( VERSION_V5 )
+#define SYSTEM_COM_VERION        ( @SYSTEM_COM_VERION@ )
 
 #if ( PROJECT_NAME == PROJECT_A_SMALL || PROJECT_NAME == PROJECT_A_PLUS )
 #define USED_MATRIX_FUNCTION     ( 0U )
 #else
 #define USED_MATRIX_FUNCTION     ( 1U )
-#endif
-
-#if ( USED_MATRIX_FUNCTION == 1U )
-#define MATRIX_TPS92662A         (0x00U)
-#define MATRIX_TPS92663A         (0x01U)
-#define MATRIX_TPS92664A         (0x02U)
-#define MATRIX_MAX_TYPE          (0x03U)
-typedef uint8_t MATRIX_TYPE_T;
 #endif
 
 #define CVCC_TPS929120           (0x00U)/**< 12 CHANNELS */
@@ -42,10 +34,6 @@ typedef uint8_t MATRIX_TYPE_T;
 
 typedef uint8_t CVCC_TYPE_T;
 
-#if ( USED_MATRIX_FUNCTION == 1U )
-#define USED_MATRIX_CHIP_NUMS    ( 3U )
-#define USED_MATRIX_LED_NUMS     ( 32U )
-#endif
 #define USED_CVCC_CHIP_NUMS      ( @USED_CVCC_CHIP_NUMS@U )
 #define USED_CVCC_CHANNEL_NUMS   ( @USED_CVCC_CHANNEL_NUMS@U )
 
@@ -54,10 +42,6 @@ typedef uint8_t CVCC_TYPE_T;
 #define SUB_UARTCAN_2  ( 2U )
 #define USED_CVCC_UARTCHN        ( @CVCC_UART_CHANNEL@ )
 typedef uint8_t UARTCAN_IDX_T;
-
-#define ADC_USED_SW    ( 0U )
-#define ADC_USED_HW    ( 1U )
-#define ADC_TRIG_METHOD  ( ADC_USED_HW )
 
 /* CVCC输出电压表: 索引宏对应目标电压，数组值为写入BUCK芯片的寄存器码值。 */
 #define CVCC_OUTPUT_VOLTAGE_LEVELS ( @CVCC_OUTPUT_VOLTAGE_LEVELS@U )
@@ -85,38 +69,8 @@ typedef uint8_t UARTCAN_IDX_T;
 #define LBHB_DERATE_THEORY   ( DERATE_THEORY_CURRENT_DERATE )
 #define SIGNAL_DERATE_THEORY ( DERATE_THEORY_PWM_DERATE )
 
-#if ( USED_MATRIX_FUNCTION == 1U )
-#define HB_WITH_ADB   ( 1U )/**< HB作为ADB输出 */
-#else
-#define HB_WITH_ADB   ( 0U )/**< HB没有ADB输出 */
-#endif
-
-#if ( PROJECT_NAME == PROJECT_A_SMALL )
-#define HB_CH_NUM     ( 1U )
-#else
-#define HB_CH_NUM     ( 3U )
-#endif
-
 #define SIGNAL_LED_CURRENT_METHOD    ( 1U )/**< 0: 电流设定+PWM调光方式 1: 恒流芯片方式,电流不变，改占空比 */
 #define TI_DRL_CURRENT_DERATE_METHOD ( 0U )/**< 0: TI_DRL使用数字降额 1: TI_DRL使用电流降额，PL用数字降额 */
-
-#if ( USED_MATRIX_FUNCTION == 1U )
-typedef struct
-{
-    uint8_t ic_addr;            /**< 矩阵芯片地址 */
-    MATRIX_TYPE_T ic_type;      /**< 矩阵芯片类型 */
-    UARTCAN_IDX_T ic_uartchn;   /**< 矩阵芯片通讯通道 */
-    uint8_t ic_io_sw_nums;      /**< 矩阵芯片开关个数 */
-    uint16_t ic_sw_mask;        /**< 矩阵芯片开关掩码 */
-}APP_Matrix_Cfg_T;
-
-typedef struct
-{
-    uint8_t matrix_id;
-    uint8_t sw_id;
-}APP_ADB_LED_POS_Cfg_T;
-
-#endif
 
 typedef struct
 {
@@ -384,17 +338,10 @@ typedef struct
    #define LOUDNESS_MAX_IDX ( 7U )
 #endif
 
-#if 1
+
 extern const __attribute__ ((section(".parameter_config_61")))  CHCM_Cfg_T CHCM_Cfg[CHCM_CFG_IDX_MAX];
-#endif
+
 extern const __attribute__ ((section(".parameter_config_63"))) Loudness_Suncoe_EEA5[LOUDNESS_MAX_IDX];
-#if ( USED_MATRIX_FUNCTION == 1U )
-extern const __attribute__ ((section(".parameter_config_49"))) uint8_t g_used_matrix_ic_nums;
-extern const __attribute__ ((section(".parameter_config_50"))) APP_Matrix_Cfg_T App_matrix_cfg_L[USED_MATRIX_CHIP_NUMS];
-extern const __attribute__ ((section(".parameter_config_51"))) uint8_t g_used_matrix_led_nums;
-extern const __attribute__ ((section(".parameter_config_52"))) APP_ADB_LED_POS_Cfg_T g_used_matrix_led_id[USED_MATRIX_CHIP_NUMS][16U];
-extern const __attribute__ ((section(".parameter_config_53"))) uint8_t g_used_matrix_led_k[USED_MATRIX_CHIP_NUMS][16U];
-#endif
 
 extern const __attribute__ ((section(".parameter_config_62"))) uint8_t u8_lb_hb_welcom_en;
 

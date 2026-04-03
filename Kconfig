@@ -7,6 +7,10 @@ config CHCM_WORKBOOK_PATH
   help
     Path to the Excel workbook used by the converter script.
 
+config HB_LB_ANIMATION_ENABLE
+  prompt "HB/LB Welcome Enable"
+  bool
+
 choice
   prompt  "Project Name"
   default PROJECT_A_SMALL
