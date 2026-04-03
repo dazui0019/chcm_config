@@ -12,12 +12,24 @@ KCONFIG_DEFAULT = Path("Kconfig")
 OUTPUT_DIR_DEFAULT = Path("output")
 HEADER_TEMPLATE_DEFAULT = Path("templates") / "app_config.h.tpl"
 SOURCE_TEMPLATE_DEFAULT = Path("templates") / "app_config.c.tpl"
+ANSI_RED = "\033[31m"
+ANSI_BOLD = "\033[1m"
+ANSI_RESET = "\033[0m"
+
+
+def format_error_message(message: str) -> str:
+    if not sys.stderr.isatty():
+        return message
+    return f"{ANSI_BOLD}{ANSI_RED}{message}{ANSI_RESET}"
 
 
 def run_step(step_no: int, total_steps: int, title: str, command: list[str]) -> None:
     print(f"[{step_no}/{total_steps}] {title}", flush=True)
     print(" ".join(command), flush=True)
-    subprocess.run(command, cwd=REPO_ROOT, check=True)
+    try:
+        subprocess.run(command, cwd=REPO_ROOT, check=True)
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(format_error_message(f"Step failed [{step_no}/{total_steps}] {title}")) from None
 
 
 def build_parser() -> argparse.ArgumentParser:

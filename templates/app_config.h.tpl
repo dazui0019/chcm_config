@@ -325,7 +325,7 @@ extern const __attribute__ ((section(".parameter_config_52"))) uint8_t u8_ti_drl
 extern const __attribute__ ((section(".parameter_config_53"))) uint8_t u8_ti_drl_pl_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_54"))) uint8_t u8_ti_drl_pl_unlock_lock_offset;
 
-extern const __attribute__ ((section(".parameter_config_55"))) uint8_t u8_adas_cvcc_map_array[16][2];
+extern const __attribute__ ((section(".parameter_config_55"))) uint8_t u8_adas_cvcc_map_array[@CH_CFG_TYPE9_CVCC_MAP_ARRAY_SIZE@][2];
 extern const __attribute__ ((section(".parameter_config_56"))) uint8_t u8_adas_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_57"))) uint8_t u8_adas_cvcc_current;
 

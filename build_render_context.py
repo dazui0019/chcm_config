@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -57,6 +58,10 @@ SCALAR_DEFAULTS = {
     "CH_CFG_TYPE7_CVCC_MAP_NUMS": 0,
     "CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE": 2,
     "CH_CFG_TYPE8_CVCC_MAP_NUMS": 0,
+    "CH_CFG_TYPE8_FIXED_CURRENT": 0,
+    "CH_CFG_TYPE9_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE9_CVCC_MAP_NUMS": 0,
+    "CH_CFG_TYPE9_FIXED_CURRENT": 0,
 }
 CVCC_OUTPUT_VOLTAGE_CONFIGS = (
     ("5V0", 68, "5.0V"),
@@ -86,6 +91,9 @@ CH_CFG_CONFIG_TYPE_IDS = tuple(range(10))
 ANIMATION_CFG_KIND_NAMES = ("lock", "unlock")
 ANIMATION_CFG_MAX_MODE_COUNT = 5
 RAW_SIGNAL_ANIMATION_SHEET_PATTERN = re.compile(r"^(lock|unlock)\s+mode\s*(\d+)$", re.IGNORECASE)
+ANSI_RED = "\033[31m"
+ANSI_BOLD = "\033[1m"
+ANSI_RESET = "\033[0m"
 TI_SEQUENTIAL_CHANNEL_PATTERN = re.compile(r"^IC(\d+)-CH(\d+)$")
 CVCC_IC_TYPE_SYMBOL_TO_MACRO = {
     "CVCC_IC_TYPE_TPS929120": "CVCC_TPS929120",
@@ -244,8 +252,8 @@ def is_block_placeholder(name: str) -> bool:
 
 
 def extract_current_config_channel_counts(current_config_payload: dict[str, Any]) -> dict[str, int]:
-    channels = current_config_payload.get("channels")
-    if not isinstance(channels, dict):
+    channels = collect_current_config_effective_channels(current_config_payload)
+    if not channels:
         return {}
 
     ti_led_nums = 0
@@ -297,14 +305,23 @@ def extract_current_config_channel_counts(current_config_payload: dict[str, Any]
     }
 
 
-def build_ch_cfg_channel_counts_domain(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    ch_cfg_payload = require_excel_payload(excel_payloads, "CH_Cfg", purpose="统计 CH_Cfg 通道类型数量")
-    ic_payloads = require_dict(ch_cfg_payload, "ics", "CH_Cfg.json")
-    descriptions = ch_cfg_payload.get("config_type_descriptions")
-    if not isinstance(descriptions, dict):
-        raise ValueError("CH_Cfg.json 缺少 config_type_descriptions。")
+def collect_current_config_effective_channels(current_config_payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    channels = current_config_payload.get("channels")
+    if not isinstance(channels, dict):
+        return {}
 
-    counts = {str(config_type): 0 for config_type in CH_CFG_CONFIG_TYPE_IDS}
+    effective_channels: dict[str, dict[str, Any]] = {}
+    for channel_key, channel_payload in channels.items():
+        if not isinstance(channel_payload, dict):
+            continue
+        if any(field in channel_payload for field in ("primary_function", "secondary_function", "fixed_current")):
+            effective_channels[str(channel_key)] = channel_payload
+    return effective_channels
+
+
+def collect_ch_cfg_channel_types(ch_cfg_payload: dict[str, Any]) -> dict[str, int]:
+    ic_payloads = require_dict(ch_cfg_payload, "ics", "CH_Cfg.json")
+    channel_types: dict[str, int] = {}
 
     for ic_name, channels in ic_payloads.items():
         if not isinstance(channels, dict):
@@ -312,10 +329,87 @@ def build_ch_cfg_channel_counts_domain(excel_payloads: dict[str, dict[str, Any]]
         for channel_name, config_type in channels.items():
             if isinstance(config_type, bool) or not isinstance(config_type, int):
                 raise ValueError(f"CH_Cfg.json 的 {ic_name}-{channel_name} 通道类型无效。")
-            config_type_key = str(config_type)
-            if config_type_key not in counts:
-                raise ValueError(f"CH_Cfg.json 的 {ic_name}-{channel_name} 出现未支持的通道类型 {config_type}。")
-            counts[config_type_key] += 1
+            channel_key = f"{ic_name}-{channel_name}"
+            channel_types[channel_key] = config_type
+
+    return channel_types
+
+
+def format_channel_key_list(channel_keys: set[str], *, limit: int = 20) -> str:
+    if not channel_keys:
+        return "无"
+
+    ordered_keys = sorted(channel_keys)
+    if len(ordered_keys) <= limit:
+        return ", ".join(ordered_keys)
+    preview = ", ".join(ordered_keys[:limit])
+    return f"{preview} ... 共 {len(ordered_keys)} 个"
+
+
+def format_type_mismatch_summary(
+    ch_cfg_channel_types: dict[str, int],
+    current_channel_keys: set[str],
+    descriptions: dict[str, str],
+) -> str:
+    ch_cfg_counts = {str(config_type): 0 for config_type in CH_CFG_CONFIG_TYPE_IDS}
+    current_counts = {str(config_type): 0 for config_type in CH_CFG_CONFIG_TYPE_IDS}
+
+    for channel_key, config_type in ch_cfg_channel_types.items():
+        config_type_key = str(config_type)
+        if config_type_key not in ch_cfg_counts:
+            continue
+        ch_cfg_counts[config_type_key] += 1
+        if channel_key in current_channel_keys:
+            current_counts[config_type_key] += 1
+
+    mismatch_lines = []
+    for config_type_key in ch_cfg_counts:
+        if ch_cfg_counts[config_type_key] == current_counts[config_type_key]:
+            continue
+        description = descriptions.get(config_type_key, "")
+        label = f"type {config_type_key}"
+        if description:
+            label += f"({description})"
+        mismatch_lines.append(
+            f"{label}: CH_Cfg={ch_cfg_counts[config_type_key]}, current_config={current_counts[config_type_key]}"
+        )
+
+    return "；".join(mismatch_lines) if mismatch_lines else "无"
+
+
+def validate_channel_config_consistency(excel_payloads: dict[str, dict[str, Any]]) -> tuple[dict[str, int], dict[str, dict[str, Any]]]:
+    ch_cfg_payload = require_excel_payload(excel_payloads, "CH_Cfg", purpose="校验通道配置一致性")
+    current_config_payload = require_excel_payload(excel_payloads, "current_config", purpose="校验通道配置一致性")
+    descriptions = ch_cfg_payload.get("config_type_descriptions")
+    if not isinstance(descriptions, dict):
+        raise ValueError("CH_Cfg.json 缺少 config_type_descriptions。")
+
+    ch_cfg_channel_types = collect_ch_cfg_channel_types(ch_cfg_payload)
+    current_effective_channels = collect_current_config_effective_channels(current_config_payload)
+
+    current_channel_keys = set(current_effective_channels)
+    mismatch_summary = format_type_mismatch_summary(ch_cfg_channel_types, current_channel_keys, descriptions)
+    if mismatch_summary != "无":
+        raise ValueError(
+            "CH_Cfg.json 与 current_config.json 的通道类型数量不一致，请检查 Excel 配置是否有误。"
+            f" {mismatch_summary}。"
+        )
+
+    return ch_cfg_channel_types, current_effective_channels
+
+
+def build_ch_cfg_channel_counts_domain(excel_payloads: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    ch_cfg_payload = require_excel_payload(excel_payloads, "CH_Cfg", purpose="统计 CH_Cfg 通道类型数量")
+    descriptions = ch_cfg_payload.get("config_type_descriptions")
+    if not isinstance(descriptions, dict):
+        raise ValueError("CH_Cfg.json 缺少 config_type_descriptions。")
+
+    counts = {str(config_type): 0 for config_type in CH_CFG_CONFIG_TYPE_IDS}
+    for channel_key, config_type in collect_ch_cfg_channel_types(ch_cfg_payload).items():
+        config_type_key = str(config_type)
+        if config_type_key not in counts:
+            raise ValueError(f"CH_Cfg.json 的 {channel_key} 出现未支持的通道类型 {config_type}。")
+        counts[config_type_key] += 1
 
     by_type = {
         config_type_key: {
@@ -330,6 +424,105 @@ def build_ch_cfg_channel_counts_domain(excel_payloads: dict[str, dict[str, Any]]
         "channel_count": ch_cfg_payload.get("channel_count", sum(counts.values())),
         "by_type": by_type,
     }
+
+
+def build_ch_cfg_fixed_currents_domain(
+    excel_payloads: dict[str, dict[str, Any]],
+    ch_cfg_channel_types: dict[str, int],
+    current_effective_channels: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    ch_cfg_payload = require_excel_payload(excel_payloads, "CH_Cfg", purpose="统计 CH_Cfg 固定电流")
+    descriptions = ch_cfg_payload.get("config_type_descriptions")
+    if not isinstance(descriptions, dict):
+        raise ValueError("CH_Cfg.json 缺少 config_type_descriptions。")
+
+    channels_by_type: dict[str, list[str]] = {str(config_type): [] for config_type in CH_CFG_CONFIG_TYPE_IDS}
+    for channel_key, config_type in sorted(ch_cfg_channel_types.items()):
+        config_type_key = str(config_type)
+        if config_type_key not in channels_by_type:
+            raise ValueError(f"CH_Cfg.json 的 {channel_key} 出现未支持的通道类型 {config_type}。")
+        channels_by_type[config_type_key].append(channel_key)
+
+    by_type: dict[str, Any] = {}
+    for config_type_key in channels_by_type:
+        channel_keys = channels_by_type[config_type_key]
+        fixed_current_values: set[int] = set()
+        missing_fixed_current_channels: list[str] = []
+        fixed_current_channel_count = 0
+
+        for channel_key in channel_keys:
+            channel_payload = current_effective_channels.get(channel_key)
+            if channel_payload is None:
+                raise ValueError(f"current_config.json 缺少通道 {channel_key}，请检查 Excel 配置是否有误。")
+
+            fixed_current = channel_payload.get("fixed_current")
+            if fixed_current is None:
+                continue
+            if isinstance(fixed_current, bool) or not isinstance(fixed_current, int):
+                raise ValueError(f"current_config.json 中 {channel_key}.fixed_current 必须是整数。")
+            fixed_current_values.add(fixed_current)
+            fixed_current_channel_count += 1
+
+        if fixed_current_channel_count:
+            for channel_key in channel_keys:
+                channel_payload = current_effective_channels[channel_key]
+                if channel_payload.get("fixed_current") is None:
+                    missing_fixed_current_channels.append(channel_key)
+
+        if missing_fixed_current_channels:
+            raise ValueError(
+                f"type {config_type_key} 的 fixed_current 配置不完整，缺少通道: "
+                f"{format_channel_key_list(set(missing_fixed_current_channels), limit=len(missing_fixed_current_channels))}。"
+            )
+        if len(fixed_current_values) > 1:
+            values = ", ".join(str(value) for value in sorted(fixed_current_values))
+            raise ValueError(f"type {config_type_key} 的 fixed_current 不唯一: {values}。")
+
+        by_type[config_type_key] = {
+            "description": descriptions.get(config_type_key, ""),
+            "channel_count": len(channel_keys),
+            "fixed_current_channel_count": fixed_current_channel_count,
+            "fixed_current": next(iter(fixed_current_values)) if fixed_current_values else None,
+            "channels": channel_keys,
+        }
+
+    return {
+        "by_type": by_type,
+    }
+
+
+def build_ch_cfg_fixed_current_placeholders(
+    ch_cfg_fixed_currents: dict[str, Any],
+    required_placeholders: set[str],
+) -> dict[str, Any]:
+    placeholder_map = {
+        "CH_CFG_TYPE8_FIXED_CURRENT": "8",
+        "CH_CFG_TYPE9_FIXED_CURRENT": "9",
+    }
+    required_map = {
+        placeholder_name: type_key
+        for placeholder_name, type_key in placeholder_map.items()
+        if placeholder_name in required_placeholders
+    }
+    if not required_map:
+        return {}
+
+    by_type = ch_cfg_fixed_currents.get("by_type")
+    if not isinstance(by_type, dict):
+        raise ValueError("ch_cfg_fixed_currents 缺少 by_type。")
+
+    placeholders: dict[str, Any] = {}
+    for placeholder_name, type_key in required_map.items():
+        type_payload = by_type.get(type_key)
+        if not isinstance(type_payload, dict):
+            raise ValueError(f"ch_cfg_fixed_currents 缺少 type {type_key} 固定电流配置。")
+
+        fixed_current = type_payload.get("fixed_current")
+        if isinstance(fixed_current, bool) or not isinstance(fixed_current, int):
+            raise ValueError(f"type {type_key} 的 fixed_current 无效，无法生成 {placeholder_name}。")
+        placeholders[placeholder_name] = fixed_current
+
+    return placeholders
 
 
 def parse_ch_cfg_index(name: str, prefix: str) -> int:
@@ -684,6 +877,56 @@ def build_ch_cfg_type8_placeholders(
         "CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE": type8_count if type8_count else 2,
         "CH_CFG_TYPE8_CVCC_MAP_ROWS": rows,
         "CH_CFG_TYPE8_CVCC_MAP_NUMS": type8_count,
+    }
+
+
+def build_ch_cfg_type9_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+) -> dict[str, Any]:
+    placeholder_names = {
+        "CH_CFG_TYPE9_CVCC_MAP_ARRAY_SIZE",
+        "CH_CFG_TYPE9_CVCC_MAP_ROWS",
+        "CH_CFG_TYPE9_CVCC_MAP_NUMS",
+    }
+    if not any(name in required_placeholders for name in placeholder_names):
+        return {}
+
+    ch_cfg_payload = require_excel_payload(excel_payloads, "CH_Cfg", purpose="生成 CH_Cfg type9 通道映射占位符")
+    ic_payloads = require_dict(ch_cfg_payload, "ics", "CH_Cfg.json")
+
+    type9_entries: list[tuple[int, int]] = []
+    for ic_name, channels in sorted(
+        ic_payloads.items(),
+        key=lambda item: parse_ch_cfg_index(item[0], "IC"),
+        reverse=True,
+    ):
+        if not isinstance(channels, dict):
+            raise ValueError(f"CH_Cfg.json 的 {ic_name} 不是对象。")
+        ic_index = parse_ch_cfg_index(ic_name, "IC")
+        for channel_name, config_type in sorted(
+            channels.items(),
+            key=lambda item: parse_ch_cfg_index(item[0], "CH"),
+            reverse=True,
+        ):
+            if config_type != 9:
+                continue
+            channel_index = parse_ch_cfg_index(channel_name, "CH")
+            type9_entries.append((ic_index, channel_index))
+
+    type9_count = len(type9_entries)
+    if not type9_entries:
+        rows = "    /* UNUSED */"
+    else:
+        rows = "\n".join(
+            f"    {{ {ic_index:2d}U, {channel_index:2d}U }}, /**< {entry_index:2d} - ADAS_{type9_count - entry_index + 1:02d} */"
+            for entry_index, (ic_index, channel_index) in enumerate(type9_entries, start=1)
+        )
+
+    return {
+        "CH_CFG_TYPE9_CVCC_MAP_ARRAY_SIZE": type9_count if type9_count else 2,
+        "CH_CFG_TYPE9_CVCC_MAP_ROWS": rows,
+        "CH_CFG_TYPE9_CVCC_MAP_NUMS": type9_count,
     }
 
 
@@ -1692,10 +1935,12 @@ def build_render_context(
     kconfig_payload: dict[str, Any],
     required_placeholders: set[str],
 ) -> dict[str, Any]:
+    ch_cfg_channel_types, current_effective_channels = validate_channel_config_consistency(excel_payloads)
     placeholders = {**SCALAR_DEFAULTS, **extract_scalar_placeholders(kconfig_payload, excel_payloads)}
     sections: dict[str, str] = {}
     cvcc_cfg = build_cvcc_cfg_domain(excel_payloads, kconfig_payload)
     ch_cfg_channel_counts = build_ch_cfg_channel_counts_domain(excel_payloads)
+    ch_cfg_fixed_currents = build_ch_cfg_fixed_currents_domain(excel_payloads, ch_cfg_channel_types, current_effective_channels)
     signal_animation = build_raw_signal_animation_domain(excel_payloads)
     placeholders.update(build_cvcc_cfg_placeholders(cvcc_cfg, required_placeholders))
     placeholders.update(build_raw_signal_animation_placeholders(signal_animation, required_placeholders))
@@ -1708,6 +1953,8 @@ def build_render_context(
     placeholders.update(build_ch_cfg_type6_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_ch_cfg_type7_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_ch_cfg_type8_placeholders(excel_payloads, required_placeholders))
+    placeholders.update(build_ch_cfg_type9_placeholders(excel_payloads, required_placeholders))
+    placeholders.update(build_ch_cfg_fixed_current_placeholders(ch_cfg_fixed_currents, required_placeholders))
     placeholders.update(build_cvcc_output_voltage_placeholders(kconfig_payload, required_placeholders))
     placeholders.update(build_chcm_cfg_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_motor_placeholders(excel_payloads, required_placeholders))
@@ -1725,6 +1972,7 @@ def build_render_context(
         "sections": sections,
         "cvcc_cfg": cvcc_cfg,
         "ch_cfg_channel_counts": ch_cfg_channel_counts,
+        "ch_cfg_fixed_currents": ch_cfg_fixed_currents,
         "signal_animation": signal_animation,
         "excel": excel_payloads,
         "kconfig": kconfig_payload,
@@ -1766,16 +2014,26 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def format_error_message(message: str) -> str:
+    if not sys.stderr.isatty():
+        return f"Error: {message}"
+    return f"{ANSI_BOLD}{ANSI_RED}Error:{ANSI_RESET} {ANSI_RED}{message}{ANSI_RESET}"
+
+
 def main() -> None:
     args = build_parser().parse_args()
-    excluded_files = {args.kconfig_json.resolve(), args.output.resolve()}
-    excel_payloads = load_excel_jsons(args.input_dir, excluded_files)
-    kconfig_payload = load_json(args.kconfig_json)
-    required_placeholders = load_required_placeholders(args.header_template, args.source_template)
+    try:
+        excluded_files = {args.kconfig_json.resolve(), args.output.resolve()}
+        excel_payloads = load_excel_jsons(args.input_dir, excluded_files)
+        kconfig_payload = load_json(args.kconfig_json)
+        required_placeholders = load_required_placeholders(args.header_template, args.source_template)
 
-    payload = build_render_context(excel_payloads, kconfig_payload, required_placeholders)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(render_json_compact(payload) + "\n", encoding="utf-8")
+        payload = build_render_context(excel_payloads, kconfig_payload, required_placeholders)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(render_json_compact(payload) + "\n", encoding="utf-8")
+    except Exception as exc:
+        print(format_error_message(str(exc)), file=sys.stderr)
+        raise SystemExit(1) from None
 
     print(f"Input dir: {args.input_dir}")
     print(f"Kconfig JSON: {args.kconfig_json}")

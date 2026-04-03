@@ -105,24 +105,28 @@ const __attribute__ ((used,used,section(".parameter_config_19")))  uint8_t u8_cv
 @CVCC_K_ARRAY_ROWS@
 };
 
+// type 5: DRL单独通道，在TI点亮且有DRL使能时，DRL需要关闭；无TI使能时，按照DRL指令点灯
 const __attribute__ ((used,used,section(".parameter_config_20")))  uint8_t u8_drl_0_cvcc_map_array[@CH_CFG_TYPE5_CVCC_MAP_ARRAY_SIZE@][2] = { 
 @CH_CFG_TYPE5_CVCC_MAP_ROWS@
 };
 const __attribute__ ((used,used,section(".parameter_config_21")))  uint8_t u8_drl_0_cvcc_map_nums = @CH_CFG_TYPE5_CVCC_MAP_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_22")))  uint8_t u8_drl_0_unlock_lock_offset = 255U;
 
+// type 6: DRL单独通道，在TI点亮且有DRL使能时，DRL需要降至PL亮度；无TI使能时，按照DRL指令点灯
 const __attribute__ ((used,used,section(".parameter_config_23")))  uint8_t u8_drl_1_cvcc_map_array[@CH_CFG_TYPE6_CVCC_MAP_ARRAY_SIZE@][2] = { 
 @CH_CFG_TYPE6_CVCC_MAP_ROWS@
 };
 const __attribute__ ((used,used,section(".parameter_config_24")))  uint8_t u8_drl_1_cvcc_map_nums = @CH_CFG_TYPE6_CVCC_MAP_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_25")))  uint8_t u8_drl_1_unlock_lock_offset = 255U;
 
+// type 7: DRL单独通道，按照DRL点灯指令点亮
 const __attribute__ ((used,used,section(".parameter_config_26")))  uint8_t u8_drl_2_cvcc_map_array[@CH_CFG_TYPE7_CVCC_MAP_ARRAY_SIZE@][2] = { 
 @CH_CFG_TYPE7_CVCC_MAP_ROWS@
 };
 const __attribute__ ((used,used,section(".parameter_config_27")))  uint8_t u8_drl_2_cvcc_map_nums = @CH_CFG_TYPE7_CVCC_MAP_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_28")))  uint8_t u8_drl_2_unlock_lock_offset = 255U;
 
+// type 2: DRL/PL共用通道，在TI使能且有DRL/PL使能时，DRL/PL需要关闭；在无TI使能时，按照PL＞DRL进行点灯
 const __attribute__ ((used,used,section(".parameter_config_29")))  uint8_t u8_drl_pl_0_cvcc_map_array[@CH_CFG_TYPE2_CVCC_MAP_ARRAY_SIZE@][2] = { 
 @CH_CFG_TYPE2_CVCC_MAP_ROWS@
 };
@@ -130,6 +134,7 @@ const __attribute__ ((used,used,section(".parameter_config_30")))  uint8_t u8_dr
 const __attribute__ ((used,used,section(".parameter_config_31")))  uint8_t u8_drl_pl_0_pl_duty = 20U;
 const __attribute__ ((used,used,section(".parameter_config_32")))  uint8_t u8_drl_pl_0_unlock_lock_offset = 16U;
 
+// type 3: DRL/PL共用通道，在TI使能且有DRL/PL使能时，DRL/PL需要降至PL亮度；在无TI使能时，按照PL＞DRL进行点灯
 const __attribute__ ((used,used,section(".parameter_config_33")))  uint8_t u8_drl_pl_1_cvcc_map_array[@CH_CFG_TYPE3_CVCC_MAP_ARRAY_SIZE@][2] = { 
 @CH_CFG_TYPE3_CVCC_MAP_ROWS@
 };
@@ -137,6 +142,7 @@ const __attribute__ ((used,used,section(".parameter_config_34")))  uint8_t u8_dr
 const __attribute__ ((used,used,section(".parameter_config_35")))  uint8_t u8_drl_pl_1_pl_duty = 12U;
 const __attribute__ ((used,used,section(".parameter_config_36")))  uint8_t u8_drl_pl_1_unlock_lock_offset = 0U;
 
+// type 4: DRL/PL共用通道，TI使能且有DRL/PL使能时，依照PL＞DRL优先级判断点亮灯光
 const __attribute__ ((used,used,section(".parameter_config_37")))  uint8_t u8_drl_pl_2_cvcc_map_array[@CH_CFG_TYPE4_CVCC_MAP_ARRAY_SIZE@][2] = { 
 @CH_CFG_TYPE4_CVCC_MAP_ROWS@
 };
@@ -145,18 +151,23 @@ const __attribute__ ((used,used,section(".parameter_config_39")))  uint8_t u8_dr
 const __attribute__ ((used,used,section(".parameter_config_40")))  uint8_t u8_drl_pl_2_unlock_lock_offset = 255U;
 
 const __attribute__ ((used,used,section(".parameter_config_41")))  uint8_t u8_hb_adb_mode = 0U; // 配置当前HB是否为ADB模式
+
+// 特殊的pl通道, 保留原格式
 const __attribute__ ((used,used,section(".parameter_config_42")))  uint8_t u8_pl_0_cvcc_map_array[2][2] = { { 0U, 0U }, { 0U, 0U } };
 const __attribute__ ((used,used,section(".parameter_config_43")))  uint8_t u8_pl_0_cvcc_map_nums = 0U;
 const __attribute__ ((used,used,section(".parameter_config_44")))  uint8_t u8_pl_0_unlock_lock_offset = 255U;
 
+// type 8: PL单独通道，按照PL点灯指令点亮
 const __attribute__ ((used,used,section(".parameter_config_45")))  uint8_t u8_pl_cvcc_map_array[@CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE@][2] = 
 { 
 @CH_CFG_TYPE8_CVCC_MAP_ROWS@
 };
 const __attribute__ ((used,used,section(".parameter_config_46")))  uint8_t u8_pl_cvcc_map_nums = @CH_CFG_TYPE8_CVCC_MAP_NUMS@U;
-const __attribute__ ((used,used,section(".parameter_config_47")))  uint8_t u8_pl_cvcc_current = 30U;
+const __attribute__ ((used,used,section(".parameter_config_47")))  uint8_t u8_pl_cvcc_current = @CH_CFG_TYPE8_FIXED_CURRENT@U;
 const __attribute__ ((used,used,section(".parameter_config_48")))  uint8_t u8_pl_unlock_lock_offset = 36U;
 const __attribute__ ((used,used,section(".parameter_config_49")))  uint8_t u8_pl_duty_cfg = 20U;
+
+// type 1: TI单独通道，当TI使能=1时，点亮该通道
 const __attribute__ ((used,used,section(".parameter_config_50")))  uint8_t u8_ti_cvcc_map_array[40][2] = { 
     { 6U, 7U }, /**<  1 - TI_20 */
     { 6U, 6U }, /**<  2 - TI_20 */
@@ -199,36 +210,23 @@ const __attribute__ ((used,used,section(".parameter_config_50")))  uint8_t u8_ti
     { 2U, 1U }, /**< 39 - TI_01 */
     { 2U, 0U }, /**< 40 - TI_01 */
 };
-
 const __attribute__ ((used,used,section(".parameter_config_51")))  uint8_t u8_ti_cvcc_map_nums = @TI_LED_NUMS@U;
 
+// type 0: TI/DRL/PL共用通道，一个时刻只能点亮一个功能，遵照TI＞PL＞DRL进行点灯
 const __attribute__ ((used,used,section(".parameter_config_52")))  uint8_t u8_ti_drl_pl_cvcc_map_array[@CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE@][2] = { 
 @CH_CFG_TYPE0_CVCC_MAP_ROWS@
 };
 const __attribute__ ((used,used,section(".parameter_config_53")))  uint8_t u8_ti_drl_pl_cvcc_map_nums = @CH_CFG_TYPE0_CVCC_MAP_NUMS@U;
 const __attribute__ ((used,used,section(".parameter_config_54")))  uint8_t u8_ti_drl_pl_unlock_lock_offset = 255U;
 
-const __attribute__ ((used,used,section(".parameter_config_55")))  uint8_t u8_adas_cvcc_map_array[16][2] = 
+
+// type 9: ADAS
+const __attribute__ ((used,used,section(".parameter_config_55")))  uint8_t u8_adas_cvcc_map_array[@CH_CFG_TYPE9_CVCC_MAP_ARRAY_SIZE@][2] = 
 { 
-    { 10U,  9U }, /**<  1 - ADAS_16 */
-    { 10U,  8U }, /**<  2 - ADAS_15 */
-    { 10U,  7U }, /**<  3 - ADAS_14 */
-    { 10U,  6U }, /**<  4 - ADAS_13 */
-    { 10U,  5U }, /**<  5 - ADAS_12 */
-    {  1U, 11U }, /**<  6 - ADAS_11 */
-    {  1U, 10U }, /**<  7 - ADAS_10 */
-    {  1U,  9U }, /**<  8 - ADAS_09 */
-    {  1U,  8U }, /**<  9 - ADAS_08 */
-    {  1U,  7U }, /**< 10 - ADAS_07 */
-    {  1U,  6U }, /**< 11 - ADAS_06 */
-    {  0U,  9U }, /**< 12 - ADAS_05 */
-    {  0U,  8U }, /**< 13 - ADAS_09 */
-    {  0U,  7U }, /**< 14 - ADAS_08 */
-    {  0U,  6U }, /**< 15 - ADAS_07 */
-    {  0U,  5U }, /**< 16 - ADAS_06 */
+@CH_CFG_TYPE9_CVCC_MAP_ROWS@
 };
-const __attribute__ ((used,used,section(".parameter_config_56")))  uint8_t u8_adas_cvcc_map_nums = @ADAS_LED_NUMS@U;
-const __attribute__ ((used,used,section(".parameter_config_57")))  uint8_t u8_adas_cvcc_current = 50U;
+const __attribute__ ((used,used,section(".parameter_config_56")))  uint8_t u8_adas_cvcc_map_nums = @CH_CFG_TYPE9_CVCC_MAP_NUMS@U;
+const __attribute__ ((used,used,section(".parameter_config_57")))  uint8_t u8_adas_cvcc_current = @CH_CFG_TYPE9_FIXED_CURRENT@U;
 
 const __attribute__ ((used,used,section(".parameter_config_58")))  uint8_t u8_ti_drl_current_method = 1U;
 
