@@ -37,26 +37,26 @@ SCALAR_DEFAULTS = {
     "TI_SWEEP_USER_STEP": 0,
     "TI_SWEEP_STEP_MAX": 0,
     "TI_SEEP_ANIMATION_MODE": 2,
-    "CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE": 1,
     "CH_CFG_TYPE0_CVCC_MAP_NUMS": 0,
-    "CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE": 1,
     "CH_CFG_TYPE1_CVCC_MAP_NUMS": 0,
-    "CH_CFG_TYPE2_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE2_CVCC_MAP_ARRAY_SIZE": 1,
     "CH_CFG_TYPE2_CVCC_MAP_NUMS": 0,
-    "CH_CFG_TYPE3_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE3_CVCC_MAP_ARRAY_SIZE": 1,
     "CH_CFG_TYPE3_CVCC_MAP_NUMS": 0,
-    "CH_CFG_TYPE4_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE4_CVCC_MAP_ARRAY_SIZE": 1,
     "CH_CFG_TYPE4_CVCC_MAP_NUMS": 0,
-    "CH_CFG_TYPE5_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE5_CVCC_MAP_ARRAY_SIZE": 1,
     "CH_CFG_TYPE5_CVCC_MAP_NUMS": 0,
-    "CH_CFG_TYPE6_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE6_CVCC_MAP_ARRAY_SIZE": 1,
     "CH_CFG_TYPE6_CVCC_MAP_NUMS": 0,
-    "CH_CFG_TYPE7_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE7_CVCC_MAP_ARRAY_SIZE": 1,
     "CH_CFG_TYPE7_CVCC_MAP_NUMS": 0,
-    "CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE": 1,
     "CH_CFG_TYPE8_CVCC_MAP_NUMS": 0,
     "CH_CFG_TYPE8_FIXED_CURRENT": 0,
-    "CH_CFG_TYPE9_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE9_CVCC_MAP_ARRAY_SIZE": 1,
     "CH_CFG_TYPE9_CVCC_MAP_NUMS": 0,
     "CH_CFG_TYPE9_FIXED_CURRENT": 0,
     "CH_CFG_TYPE0_UNLOCK_LOCK_OFFSET": 255,
@@ -560,7 +560,7 @@ def build_ch_cfg_type0_placeholders(
 
     type0_count = len(type0_entries)
     return {
-        "CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE": type0_count if type0_count else 2,
+        "CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE": type0_count if type0_count else 1,
         "CH_CFG_TYPE0_CVCC_MAP_ROWS": format_ch_cfg_type0_rows(type0_entries),
         "CH_CFG_TYPE0_CVCC_MAP_NUMS": type0_count,
     }
@@ -613,7 +613,7 @@ def build_ch_cfg_type1_placeholders(
         )
 
     return {
-        "CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE": type1_count if type1_count else 2,
+        "CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE": type1_count if type1_count else 1,
         "CH_CFG_TYPE1_CVCC_MAP_ROWS": rows,
         "CH_CFG_TYPE1_CVCC_MAP_NUMS": type1_count,
     }
@@ -663,7 +663,7 @@ def build_ch_cfg_type2_placeholders(
         )
 
     return {
-        "CH_CFG_TYPE2_CVCC_MAP_ARRAY_SIZE": type2_count if type2_count else 2,
+        "CH_CFG_TYPE2_CVCC_MAP_ARRAY_SIZE": type2_count if type2_count else 1,
         "CH_CFG_TYPE2_CVCC_MAP_ROWS": rows,
         "CH_CFG_TYPE2_CVCC_MAP_NUMS": type2_count,
     }
@@ -713,7 +713,7 @@ def build_ch_cfg_type3_placeholders(
         )
 
     return {
-        "CH_CFG_TYPE3_CVCC_MAP_ARRAY_SIZE": type3_count if type3_count else 2,
+        "CH_CFG_TYPE3_CVCC_MAP_ARRAY_SIZE": type3_count if type3_count else 1,
         "CH_CFG_TYPE3_CVCC_MAP_ROWS": rows,
         "CH_CFG_TYPE3_CVCC_MAP_NUMS": type3_count,
     }
@@ -763,7 +763,7 @@ def build_ch_cfg_type4_placeholders(
         )
 
     return {
-        "CH_CFG_TYPE4_CVCC_MAP_ARRAY_SIZE": type4_count if type4_count else 2,
+        "CH_CFG_TYPE4_CVCC_MAP_ARRAY_SIZE": type4_count if type4_count else 1,
         "CH_CFG_TYPE4_CVCC_MAP_ROWS": rows,
         "CH_CFG_TYPE4_CVCC_MAP_NUMS": type4_count,
     }
@@ -818,7 +818,7 @@ def build_ch_cfg_drl_placeholders(
         )
 
     return {
-        array_size_name: entry_count if entry_count else 2,
+        array_size_name: entry_count if entry_count else 1,
         rows_name: rows,
         nums_name: entry_count,
     }
@@ -908,7 +908,7 @@ def build_ch_cfg_type8_placeholders(
         )
 
     return {
-        "CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE": type8_count if type8_count else 2,
+        "CH_CFG_TYPE8_CVCC_MAP_ARRAY_SIZE": type8_count if type8_count else 1,
         "CH_CFG_TYPE8_CVCC_MAP_ROWS": rows,
         "CH_CFG_TYPE8_CVCC_MAP_NUMS": type8_count,
     }
@@ -958,7 +958,7 @@ def build_ch_cfg_type9_placeholders(
         )
 
     return {
-        "CH_CFG_TYPE9_CVCC_MAP_ARRAY_SIZE": type9_count if type9_count else 2,
+        "CH_CFG_TYPE9_CVCC_MAP_ARRAY_SIZE": type9_count if type9_count else 1,
         "CH_CFG_TYPE9_CVCC_MAP_ROWS": rows,
         "CH_CFG_TYPE9_CVCC_MAP_NUMS": type9_count,
     }

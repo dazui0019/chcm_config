@@ -101,12 +101,12 @@ const __attribute__ ((used,used,section(".parameter_config_18")))  uint8_t u8_un
 };
 
 /* 各恒流芯片每个通道输出电流值K系数 */
-const __attribute__ ((used,used,section(".parameter_config_19")))  uint8_t u8_cvcc_k_array[USED_CVCC_CHIP_NUMS][USED_CVCC_CHANNEL_NUMS] = { 
+const __attribute__ ((used,used,section(".parameter_config_19")))  uint8_t u8_cvcc_k_array[USED_CVCC_CHIP_NUMS][USED_CVCC_CHANNEL_NUMS] = {
 @CVCC_K_ARRAY_ROWS@
 };
 
 // type 5: DRL单独通道，在TI点亮且有DRL使能时，DRL需要关闭；无TI使能时，按照DRL指令点灯
-const __attribute__ ((used,used,section(".parameter_config_20")))  uint8_t u8_drl_0_cvcc_map_array[@CH_CFG_TYPE5_CVCC_MAP_ARRAY_SIZE@][2] = { 
+const __attribute__ ((used,used,section(".parameter_config_20")))  uint8_t u8_drl_0_cvcc_map_array[@CH_CFG_TYPE5_CVCC_MAP_ARRAY_SIZE@][2] = {
 @CH_CFG_TYPE5_CVCC_MAP_ROWS@
 };
 const __attribute__ ((used,used,section(".parameter_config_21")))  uint8_t u8_drl_0_cvcc_map_nums = @CH_CFG_TYPE5_CVCC_MAP_NUMS@U;
