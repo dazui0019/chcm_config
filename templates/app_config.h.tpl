@@ -239,16 +239,6 @@ extern const __attribute__ ((section(".parameter_config_5"))) uint8_t u8_ti_swee
 
 #define LOCK_UNLOCK_MAX_MODE_NUMS  ( 10U ) /**< 最大闭锁/解锁动画模式数 */
 
-#define TI_DRL_PL_LED_NUMS         ( @TI_DRL_PL_LED_NUMS@U ) /**< TI/DRL/PL使用的通道数 */
-#define TI_LED_NUMS                ( @TI_LED_NUMS@U ) /**< TI 使用的通道数 */
-#define DRL_PL_0_LED_NUMS          ( 0U  ) /**< DRL/PL0 使用的灯珠数 */
-#define DRL_0_LED_NUMS             ( 0U  ) /**< DRL0 使用的灯珠数 */
-#define DRL_PL_1_LED_NUMS          ( 0U  ) /**< DRL/PL1 使用的灯珠数 */
-#define DRL_1_LED_NUMS             ( 0U  ) /**< DRL1 使用的灯珠数 */
-#define DRL_PL_2_LED_NUMS          ( 0U  ) /**< DRL/PL2 使用的灯珠数 */
-#define DRL_2_LED_NUMS             ( 0U  ) /**< DRL2 使用的灯珠数 */
-#define PL_LED_NUMS                ( @PL_LED_NUMS@U ) /**< PL 使用的通道数 */
-
 #define SIGNAL_ANIMATION_LED_NUMS  ( 54U ) /**< 信号动画使用的灯珠数 */
 
 extern const __attribute__ ((section(".parameter_config_6"))) uint16_t u8_lock_unlock_animation_total_steps[LOCK_UNLOCK_MAX_MODE_NUMS];

@@ -36,13 +36,6 @@ SCALAR_DEFAULTS = {
     "TI_SWEEP_USER_STEP": 0,
     "TI_SWEEP_STEP_MAX": 0,
     "TI_SEEP_ANIMATION_MODE": 2,
-    "TI_DRL_PL_LED_NUMS": 0,
-    "TI_LED_NUMS": 0,
-    "DRL_LED_NUMS": 0,
-    "PL_LED_NUMS": 0,
-    "PL_ONLY_LED_NUMS": 0,
-    "ADAS_LED_NUMS": 0,
-    "TI_DRL_PL_SHARED_LED_NUMS": 0,
     "CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE": 2,
     "CH_CFG_TYPE0_CVCC_MAP_NUMS": 0,
     "CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE": 2,
@@ -269,12 +262,6 @@ def extract_current_config_channel_counts(current_config_payload: dict[str, Any]
         return {}
 
     ti_led_nums = 0
-    drl_led_nums = 0
-    pl_led_nums = 0
-    pl_only_led_nums = 0
-    adas_led_nums = 0
-    ti_drl_pl_led_nums = 0
-    ti_drl_pl_shared_led_nums = 0
 
     for channel_payload in channels.values():
         if not isinstance(channel_payload, dict):
@@ -291,29 +278,10 @@ def extract_current_config_channel_counts(current_config_payload: dict[str, Any]
 
         if "TI" in function_names:
             ti_led_nums += 1
-        if "DRL" in function_names:
-            drl_led_nums += 1
-        if "PL" in function_names:
-            pl_led_nums += 1
-        if function_names == {"PL"}:
-            pl_only_led_nums += 1
-        if "ADAS" in function_names:
-            adas_led_nums += 1
-        if function_names & {"TI", "DRL", "PL"}:
-            ti_drl_pl_led_nums += 1
-        if {"TI", "DRL", "PL"} <= function_names:
-            ti_drl_pl_shared_led_nums += 1
 
     return {
         "TI_USED_LED_NUMS": ti_led_nums,
         "TI_USED_LED_NUMS_DATA_LENS": math.ceil(ti_led_nums / 32) if ti_led_nums else 0,
-        "TI_DRL_PL_LED_NUMS": ti_drl_pl_led_nums,
-        "TI_LED_NUMS": ti_led_nums,
-        "DRL_LED_NUMS": drl_led_nums,
-        "PL_LED_NUMS": pl_led_nums,
-        "PL_ONLY_LED_NUMS": pl_only_led_nums,
-        "ADAS_LED_NUMS": adas_led_nums,
-        "TI_DRL_PL_SHARED_LED_NUMS": ti_drl_pl_shared_led_nums,
     }
 
 
