@@ -317,7 +317,7 @@ extern const __attribute__ ((section(".parameter_config_48"))) uint8_t u8_pl_unl
 extern const __attribute__ ((section(".parameter_config_49"))) uint8_t u8_pl_duty_cfg;
 
 /* 恒流类型1输出通道: 单独的TI通道输出 T1 */
-extern const __attribute__ ((section(".parameter_config_50"))) uint8_t u8_ti_cvcc_map_array[40][2];
+extern const __attribute__ ((section(".parameter_config_50"))) uint8_t u8_ti_cvcc_map_array[@CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE@][2];
 extern const __attribute__ ((section(".parameter_config_51"))) uint8_t u8_ti_cvcc_map_nums;
 extern const __attribute__ ((section(".parameter_config_52"))) uint8_t u8_ti_drl_pl_cvcc_map_array[@CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE@][2];
 

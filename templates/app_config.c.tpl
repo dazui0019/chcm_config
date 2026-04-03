@@ -168,49 +168,10 @@ const __attribute__ ((used,used,section(".parameter_config_48")))  uint8_t u8_pl
 const __attribute__ ((used,used,section(".parameter_config_49")))  uint8_t u8_pl_duty_cfg = 20U;
 
 // type 1: TI单独通道，当TI使能=1时，点亮该通道
-const __attribute__ ((used,used,section(".parameter_config_50")))  uint8_t u8_ti_cvcc_map_array[40][2] = { 
-    { 6U, 7U }, /**<  1 - TI_20 */
-    { 6U, 6U }, /**<  2 - TI_20 */
-    { 6U, 5U }, /**<  3 - TI_19 */
-    { 6U, 4U }, /**<  4 - TI_19 */
-    { 6U, 3U }, /**<  5 - TI_18 */
-    { 6U, 2U }, /**<  6 - TI_18 */
-    { 6U, 1U }, /**<  7 - TI_17 */
-    { 6U, 0U }, /**<  8 - TI_17 */
-    { 5U, 7U }, /**<  9 - TI_16 */
-    { 5U, 6U }, /**< 10 - TI_16 */
-    { 5U, 5U }, /**< 11 - TI_15 */
-    { 5U, 4U }, /**< 12 - TI_15 */
-    { 5U, 3U }, /**< 13 - TI_14 */
-    { 5U, 2U }, /**< 14 - TI_14 */
-    { 5U, 1U }, /**< 15 - TI_13 */
-    { 5U, 0U }, /**< 16 - TI_13 */
-    { 4U, 7U }, /**< 17 - TI_12 */
-    { 4U, 6U }, /**< 18 - TI_12 */
-    { 4U, 5U }, /**< 19 - TI_11 */
-    { 4U, 4U }, /**< 20 - TI_11 */
-    { 4U, 3U }, /**< 21 - TI_10 */
-    { 4U, 2U }, /**< 22 - TI_10 */
-    { 4U, 1U }, /**< 23 - TI_09 */
-    { 4U, 0U }, /**< 24 - TI_09 */
-    { 3U, 7U }, /**< 25 - TI_08 */
-    { 3U, 6U }, /**< 26 - TI_08 */
-    { 3U, 5U }, /**< 27 - TI_07 */
-    { 3U, 4U }, /**< 28 - TI_07 */
-    { 3U, 3U }, /**< 29 - TI_06 */
-    { 3U, 2U }, /**< 30 - TI_06 */
-    { 3U, 1U }, /**< 31 - TI_05 */
-    { 3U, 0U }, /**< 32 - TI_05 */
-    { 2U, 7U }, /**< 33 - TI_04 */
-    { 2U, 6U }, /**< 34 - TI_04 */
-    { 2U, 5U }, /**< 35 - TI_03 */
-    { 2U, 4U }, /**< 36 - TI_03 */
-    { 2U, 3U }, /**< 37 - TI_02 */
-    { 2U, 2U }, /**< 38 - TI_02 */
-    { 2U, 1U }, /**< 39 - TI_01 */
-    { 2U, 0U }, /**< 40 - TI_01 */
+const __attribute__ ((used,used,section(".parameter_config_50")))  uint8_t u8_ti_cvcc_map_array[@CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE@][2] = { 
+@CH_CFG_TYPE1_CVCC_MAP_ROWS@
 };
-const __attribute__ ((used,used,section(".parameter_config_51")))  uint8_t u8_ti_cvcc_map_nums = @TI_LED_NUMS@U;
+const __attribute__ ((used,used,section(".parameter_config_51")))  uint8_t u8_ti_cvcc_map_nums = @CH_CFG_TYPE1_CVCC_MAP_NUMS@U;
 
 // type 0: TI/DRL/PL共用通道，一个时刻只能点亮一个功能，遵照TI＞PL＞DRL进行点灯
 const __attribute__ ((used,used,section(".parameter_config_52")))  uint8_t u8_ti_drl_pl_cvcc_map_array[@CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE@][2] = { 

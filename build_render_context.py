@@ -45,6 +45,8 @@ SCALAR_DEFAULTS = {
     "TI_DRL_PL_SHARED_LED_NUMS": 0,
     "CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE": 2,
     "CH_CFG_TYPE0_CVCC_MAP_NUMS": 0,
+    "CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE": 2,
+    "CH_CFG_TYPE1_CVCC_MAP_NUMS": 0,
     "CH_CFG_TYPE2_CVCC_MAP_ARRAY_SIZE": 2,
     "CH_CFG_TYPE2_CVCC_MAP_NUMS": 0,
     "CH_CFG_TYPE3_CVCC_MAP_ARRAY_SIZE": 2,
@@ -592,6 +594,59 @@ def build_ch_cfg_type0_placeholders(
         "CH_CFG_TYPE0_CVCC_MAP_ARRAY_SIZE": type0_count if type0_count else 2,
         "CH_CFG_TYPE0_CVCC_MAP_ROWS": format_ch_cfg_type0_rows(type0_entries),
         "CH_CFG_TYPE0_CVCC_MAP_NUMS": type0_count,
+    }
+
+
+def build_ch_cfg_type1_placeholders(
+    excel_payloads: dict[str, dict[str, Any]],
+    required_placeholders: set[str],
+) -> dict[str, Any]:
+    placeholder_names = {
+        "CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE",
+        "CH_CFG_TYPE1_CVCC_MAP_ROWS",
+        "CH_CFG_TYPE1_CVCC_MAP_NUMS",
+    }
+    if not any(name in required_placeholders for name in placeholder_names):
+        return {}
+
+    ch_cfg_payload = require_excel_payload(excel_payloads, "CH_Cfg", purpose="生成 CH_Cfg type1 通道映射占位符")
+    ic_payloads = require_dict(ch_cfg_payload, "ics", "CH_Cfg.json")
+
+    type1_entries: list[tuple[int, int]] = []
+    for ic_name, channels in sorted(
+        ic_payloads.items(),
+        key=lambda item: parse_ch_cfg_index(item[0], "IC"),
+        reverse=True,
+    ):
+        if not isinstance(channels, dict):
+            raise ValueError(f"CH_Cfg.json 的 {ic_name} 不是对象。")
+        ic_index = parse_ch_cfg_index(ic_name, "IC")
+        for channel_name, config_type in sorted(
+            channels.items(),
+            key=lambda item: parse_ch_cfg_index(item[0], "CH"),
+            reverse=True,
+        ):
+            if config_type != 1:
+                continue
+            channel_index = parse_ch_cfg_index(channel_name, "CH")
+            type1_entries.append((ic_index, channel_index))
+
+    type1_count = len(type1_entries)
+    if not type1_entries:
+        rows = "    /* UNUSED */"
+    else:
+        rows = "\n".join(
+            (
+                f"    {{ {ic_index:2d}U, {channel_index:2d}U }}, "
+                f"/**< {entry_index:2d} - TI_{((type1_count - entry_index) // 2) + 1:02d} */"
+            )
+            for entry_index, (ic_index, channel_index) in enumerate(type1_entries, start=1)
+        )
+
+    return {
+        "CH_CFG_TYPE1_CVCC_MAP_ARRAY_SIZE": type1_count if type1_count else 2,
+        "CH_CFG_TYPE1_CVCC_MAP_ROWS": rows,
+        "CH_CFG_TYPE1_CVCC_MAP_NUMS": type1_count,
     }
 
 
@@ -2185,6 +2240,7 @@ def build_render_context(
     placeholders.update(build_animation_start_column_placeholders(animation_board_types, required_placeholders))
     placeholders.update(build_ti_sequential_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_ch_cfg_type0_placeholders(excel_payloads, required_placeholders))
+    placeholders.update(build_ch_cfg_type1_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_ch_cfg_type2_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_ch_cfg_type3_placeholders(excel_payloads, required_placeholders))
     placeholders.update(build_ch_cfg_type4_placeholders(excel_payloads, required_placeholders))
