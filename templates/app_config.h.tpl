@@ -341,7 +341,7 @@ typedef struct
 
 extern const __attribute__ ((section(".parameter_config_61")))  CHCM_Cfg_T CHCM_Cfg[CHCM_CFG_IDX_MAX];
 
-extern const __attribute__ ((section(".parameter_config_63"))) Loudness_Suncoe_EEA5[LOUDNESS_MAX_IDX];
+extern const __attribute__ ((section(".parameter_config_63"))) uint16_t Loudness_Suncoe_EEA5[LOUDNESS_MAX_IDX];
 
 extern const __attribute__ ((section(".parameter_config_62"))) uint8_t u8_lb_hb_welcom_en;
 
