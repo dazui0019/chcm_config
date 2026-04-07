@@ -7,5 +7,6 @@ requires-python = ">=3.13"
 dependencies = [
     "kconfiglib>=14.1.0",
     "openpyxl>=3.1.5",
+    "scons>=4.10.1",
     "windows-curses>=2.4.1",
 ]

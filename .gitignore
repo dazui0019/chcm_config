@@ -14,3 +14,6 @@ xlsx/
 output/
 .config
 .config.old
+
+toolchain/
+.sconsign.dblite
