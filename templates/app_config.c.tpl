@@ -262,6 +262,6 @@ const __attribute__ ((used,used,section(".parameter_config_60"))) MOTOR_CONIFICT
     },
 };
 
-extern const __attribute__ ((section(".parameter_config_63"))) uint16_t Loudness_Suncoe_EEA5[LOUDNESS_MAX_IDX] = {
+const __attribute__ ((section(".parameter_config_63"))) uint16_t Loudness_Suncoe_EEA5[LOUDNESS_MAX_IDX] = {
     67, 79, 90, 96, 100, 86, 83, 70, 65
 };
