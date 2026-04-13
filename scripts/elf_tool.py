@@ -9,7 +9,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-DEFAULT_NM = PROJECT_ROOT / "toolchain" / "mingw-w64-x86_64-arm-none-eabi" / "bin" / "arm-none-eabi-nm.exe"
+DEFAULT_NM = Path(r"D:\environment\windows\arm-gcc\arm-gnu-toolchain-12.3.rel1\bin\arm-none-eabi-nm.exe")
 TARGET_SYMBOLS = ("__cflash_start", "__cflash_end")
 SKIP_NAME_PREFIXES = (".", "$")
 SKIP_NAME_EXACT: set[str] = set()

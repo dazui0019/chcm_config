@@ -66,7 +66,8 @@ SECTIONS
 {
     .configFLASH __CONFIG_ADDRESS : AT(__CONFIG_ADDRESS)
     {
-      . = ALIGN(4);
+        __cflash_start = .;
+        . = ALIGN(4);
         KEEP(*(.parameter_config_0))
         KEEP(*(.parameter_config_1))
         KEEP(*(.parameter_config_2))
@@ -157,5 +158,6 @@ SECTIONS
 
         KEEP(*(.parameter_config))
         . = ALIGN(4);
+        __cflash_end = .;
     } > CONFIG
 }
