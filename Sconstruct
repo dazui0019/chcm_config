@@ -1,6 +1,7 @@
 import os
 
 linker_script = os.path.join('config_bin.ld')
+map_file = os.path.join('build', 'app_config.map')
 
 gcc_path = os.path.abspath(
     os.path.join(
@@ -13,7 +14,7 @@ gcc_path = os.path.abspath(
 env = Environment(
     tools=['gcc', 'gnulink', 'ar'],
     CC=os.path.join(gcc_path, 'arm-none-eabi-gcc.exe'),
-    AS=os.path.join(gcc_path, 'arm-none-eabi-as.exe'),
+    AS=os.path.join(gcc_path, 'arm-none-eabi-gcc.exe'),
     AR=os.path.join(gcc_path, 'arm-none-eabi-ar.exe'),
     LINK=os.path.join(gcc_path, 'arm-none-eabi-gcc.exe'),
     OBJCOPY=os.path.join(gcc_path, 'arm-none-eabi-objcopy.exe'),
@@ -21,22 +22,84 @@ env = Environment(
     PROGSUFFIX='.elf',
 )
 
+env.Append(CPPDEFINES=[
+    'D_CACHE_ENABLE',
+    'I_CACHE_ENABLE',
+    'ENABLE_FPU',
+    'MPU_ENABLE',
+    'GCC',
+    'CPU_S32K314',
+    'CPU_CORTEX_M7',
+    'DISABLE_MCAL_INTERMODULE_ASR_CHECK',
+])
+
 env.Append(CCFLAGS=[
-    '-mcpu=cortex-m4',
-    '-mthumb',
-    '-ffreestanding',
-    '-fdata-sections',
+    '-O1',
+    '-fdiagnostics-color=always',
     '-ffunction-sections',
+    '-fdata-sections',
+    '-fno-diagnostics-show-caret',
+    '-mcpu=cortex-m7',
+    '-mthumb',
+    '-mlittle-endian',
+    '-mfloat-abi=hard',
+    '-mfpu=fpv5-sp-d16',
+    '-specs=nano.specs',
+    '-specs=nosys.specs',
+])
+
+env.Append(CFLAGS=[
+    '-std=c99',
+    '-pedantic',
+    '-Wall',
+    '-Wextra',
+    '-fmessage-length=0',
+    '-funsigned-char',
+    '-funsigned-bitfields',
+    '-fomit-frame-pointer',
+    '-fno-short-enums',
+    '-fno-common',
+    '-Wunused',
+    '-Wsign-compare',
+    '-Werror=implicit-function-declaration',
+    '-Wundef',
+    '-Wstrict-prototypes',
+    '-Wno-unknown-pragmas',
+    '-Wdouble-promotion',
+])
+
+env.Append(ASFLAGS=[
+    '-x',
+    'assembler-with-cpp',
+    '-O1',
+    '-fdiagnostics-color=always',
+    '-ffunction-sections',
+    '-fdata-sections',
+    '-fno-diagnostics-show-caret',
+    '-mcpu=cortex-m7',
+    '-mthumb',
+    '-mlittle-endian',
+    '-mfloat-abi=hard',
+    '-mfpu=fpv5-sp-d16',
+    '-specs=nano.specs',
+    '-specs=nosys.specs',
 ])
 
 env.Append(LINKFLAGS=[
-    '-mcpu=cortex-m4',
+    '-mcpu=cortex-m7',
     '-mthumb',
-    '-nostdlib',
+    '-mlittle-endian',
+    '-mfloat-abi=hard',
+    '-mfpu=fpv5-sp-d16',
+    '-specs=nano.specs',
+    '-specs=nosys.specs',
     '-nostartfiles',
     '-Wl,--gc-sections',
+    '-Wl,-Map=' + map_file,
     '-T' + linker_script,
 ])
+
+env.Append(LIBS=['m'])
 
 env.Replace(
     CCCOMSTR='CC      $SOURCE',
@@ -71,9 +134,15 @@ bin_file = env.Command(
     elf,
     Action('$OBJCOPY -O binary $SOURCE $TARGET', 'OBJCOPY $SOURCE --> $TARGET')
 )
+hex_file = env.Command(
+    'build/app_config.hex',
+    elf,
+    Action('$OBJCOPY -O ihex $SOURCE $TARGET', 'OBJCOPY $SOURCE --> $TARGET')
+)
 
-# 默认生成bin文件, 直接在终端输入 scons 即可
-Default(bin_file)
+# 默认生成 bin 和 hex 文件, 直接在终端输入 scons 即可
+Default([bin_file, hex_file])
 
-# 在终端输入 scons bin 可以生成bin文件。 目前多余了。
+# 在终端输入 scons bin 或 scons hex 可以单独生成对应文件。
 env.Alias('bin', bin_file)
+env.Alias('hex', hex_file)
