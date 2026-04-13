@@ -1,62 +1,175 @@
 import os
 
-linker_script = os.path.join('resources', 'linker', 'config_bin.ld')
-
-gcc_path = os.path.join(
+ARM_GCC_ROOT = os.path.join(
     r'D:\environment',
     'windows',
-    'arm-gcc',
-    'arm-gnu-toolchain-12.3.rel1',
-    'bin'
+    'arm-gcc'
 )
+
+GCC_PATH = os.path.join(ARM_GCC_ROOT, 'arm-gnu-toolchain-12.3.rel1', 'bin')
+
+BUILD_PROFILES = {
+    'a_plus': {
+        'linker_script': os.path.join('resources', 'linker', 'a_plus_config_bin.ld'),
+        'cppdefines': [
+            'D_CACHE_ENABLE',
+            'I_CACHE_ENABLE',
+            'ENABLE_FPU',
+            'MPU_ENABLE',
+            'GCC',
+            'CPU_S32K314',
+            'CPU_CORTEX_M7',
+            'DISABLE_MCAL_INTERMODULE_ASR_CHECK',
+        ],
+        'ccflags': [
+            '-fdata-sections',
+            '-mcpu=cortex-m7',
+            '-mthumb',
+            '-mlittle-endian',
+            '-mfloat-abi=hard',
+            '-mfpu=fpv5-sp-d16',
+        ],
+        'cflags': [
+            '-std=c99',
+            '-funsigned-char',
+            '-funsigned-bitfields',
+            '-fno-short-enums',
+            '-fno-common',
+        ],
+        'linkflags': [
+            '-nostdlib',        # 不使用标准库
+            '-nostartfiles',    # 不链接启动文件
+            '-Wl,--gc-sections',
+            '-mcpu=cortex-m7',
+            '-mthumb',
+            '-mlittle-endian',
+            '-mfloat-abi=hard',
+            '-mfpu=fpv5-sp-d16',
+        ],
+        'cpppath': [
+            '../Platform/Common',
+            '../Platform/generated',
+            '../McuLib/S32K3XX/BaseNXP_TS_T40D34M50I0R0/include',
+            '../App/app_swi',
+            '../App/app_swi/config',
+        ],
+        'objects': [
+            {
+                'target': 'build/obj/app_config.o',
+                'source': '../App/app_config.c',
+            },
+            {
+                'target': 'build/obj/app_swi_config.o',
+                'source': '../App/app_swi/config/app_swi_config.c',
+            },
+        ],
+        'elf_target': 'build/app_config.elf',
+        'bin_target': 'build/app_config.bin',
+        'hex_target': 'build/app_config.hex',
+    },
+    'a_small': {
+        'linker_script': os.path.join('resources', 'linker', 'a_small_config_bin.ld'),
+        'cppdefines': [
+            'DISABLE_MCAL_INTERMODULE_ASR_CHECK',
+            'GCC',
+            'M4_DEVICE_RESERVED_ADDR=0x40080000',
+            'CPU_CORTEX_M4F',
+            'ENABLE_FPU',
+            'I_CACHE_EANBLE',
+            'S32K144',
+            'S32K1XX',
+            'CPU_S32K144HFT0VLLT',
+        ],
+        'ccflags': [
+            '-ffunction-sections',
+            '-fdata-sections',
+            '-fmessage-length=0',
+            '-fomit-frame-pointer',
+            '-Wunused',
+            '-Wsign-compare',
+            '-Wundef',
+            '-Wstrict-prototypes',
+            '-Wno-unknown-pragmas',
+            '-Wdouble-promotion',
+            '-mcpu=cortex-m4',
+            '-mthumb',
+            '-mlittle-endian',
+            '-mfloat-abi=hard',
+            '-mfpu=fpv4-sp-d16',
+            '-specs=nano.specs',
+            '-fno-diagnostics-show-caret',
+            '-fno-inline',
+            '-fno-omit-frame-pointer',
+            '-fno-ipa-icf',
+            '-fno-tree-vectorize',
+            '-fno-tree-sra',
+            '-fno-move-loop-invariants',
+            '-fno-eliminate-unused-debug-symbols',
+        ],
+        'cflags': [
+            '-std=c99',
+            '-O1',
+            '-pedantic',
+            '-Wall',
+            '-Wextra',
+            '-funsigned-char',
+            '-funsigned-bitfields',
+            '-fno-short-enums',
+            '-fno-common',
+        ],
+        'linkflags': [
+            '-nostdlib',        # 不使用标准库
+            '-nostartfiles',    # 不链接启动文件
+            '-Wl,--gc-sections',
+            '-mcpu=cortex-m4',
+            '-mthumb',
+            '-mlittle-endian',
+            '-mfloat-abi=hard',
+            '-mfpu=fpv4-sp-d16',
+            '-specs=nano.specs',
+        ],
+        'cpppath': [
+            '../App',
+            '../Platform/platf_flash'
+        ],
+        'objects': [
+            {
+                'target': 'build/obj/app_config.o',
+                'source': '../App/app_config.c',
+            }
+        ],
+        'elf_target': 'build/app_config.elf',
+        'bin_target': 'build/app_config.bin',
+        'hex_target': 'build/app_config.hex',
+    },
+}
+
+profile_name = ARGUMENTS.get('profile', 'a_small')
+profile = BUILD_PROFILES.get(profile_name)
+if profile is None:
+    available_profiles = ', '.join(sorted(BUILD_PROFILES))
+    raise SystemExit(f'Unknown build profile: {profile_name}. Available: {available_profiles}')
+
+linker_script = profile['linker_script']
 
 env = Environment(
     tools=['gcc', 'gnulink', 'ar'],
-    CC=os.path.join(gcc_path, 'arm-none-eabi-gcc.exe'),
-    AS=os.path.join(gcc_path, 'arm-none-eabi-gcc.exe'),
-    AR=os.path.join(gcc_path, 'arm-none-eabi-ar.exe'),
-    LINK=os.path.join(gcc_path, 'arm-none-eabi-gcc.exe'),
-    OBJCOPY=os.path.join(gcc_path, 'arm-none-eabi-objcopy.exe'),
+    CC=os.path.join(GCC_PATH, 'arm-none-eabi-gcc.exe'),
+    AS=os.path.join(GCC_PATH, 'arm-none-eabi-gcc.exe'),
+    AR=os.path.join(GCC_PATH, 'arm-none-eabi-ar.exe'),
+    LINK=os.path.join(GCC_PATH, 'arm-none-eabi-gcc.exe'),
+    OBJCOPY=os.path.join(GCC_PATH, 'arm-none-eabi-objcopy.exe'),
     OBJSUFFIX='.o',
     PROGSUFFIX='.elf',
 )
 
-env.Append(CPPDEFINES=[
-    'D_CACHE_ENABLE',
-    'I_CACHE_ENABLE',
-    'ENABLE_FPU',
-    'MPU_ENABLE',
-    'GCC',
-    'CPU_S32K314',
-    'CPU_CORTEX_M7',
-    'DISABLE_MCAL_INTERMODULE_ASR_CHECK',
-])
+env.Append(CPPDEFINES=profile['cppdefines'])
 
-env.Append(CCFLAGS=[
-    '-fdata-sections',
-    '-mcpu=cortex-m7',
-    '-mthumb',
-    '-mlittle-endian',
-    '-mfloat-abi=hard',
-    '-mfpu=fpv5-sp-d16',
-])
+env.Append(CCFLAGS=profile['ccflags'])
 
-env.Append(CFLAGS=[
-    '-std=c99',
-    '-funsigned-char',
-    '-funsigned-bitfields',
-    '-fno-short-enums',
-    '-fno-common',
-])
+env.Append(CFLAGS=profile['cflags'])
 
-env.Append(LINKFLAGS=[
-    '-mcpu=cortex-m7',
-    '-mthumb',
-    '-mlittle-endian',
-    '-mfloat-abi=hard',
-    '-mfpu=fpv5-sp-d16',
-    '-T' + linker_script,
-])
+env.Append(LINKFLAGS=profile['linkflags'] + ['-T' + linker_script])
 
 env.Replace(
     CCCOMSTR='CC      $SOURCE',
@@ -67,32 +180,21 @@ env.Replace(
     COMPILATIONDB_COMSTR=None,
 )
 
-env.Append(CPPPATH=[
-    '../Platform/Common',
-    '../Platform/generated',
-    '../McuLib/S32K3XX/BaseNXP_TS_T40D34M50I0R0/include',
-    '../App/app_swi',
-    '../App/app_swi/config'
-    ])
+env.Append(CPPPATH=profile['cpppath'])
 
-cfg_obj = env.Object(
-    target='build/obj/app_config.o',
-    source='../App/app_config.c'
-)
+objects = [
+    env.Object(target=item['target'], source=item['source'])
+    for item in profile['objects']
+]
 
-swi_obj = env.Object(
-    target='build/obj/app_swi_config.o',
-    source='../App/app_swi/config/app_swi_config.c'
-)
-
-elf = env.Program(target='build/app_config.elf', source=[cfg_obj, swi_obj])
+elf = env.Program(target=profile['elf_target'], source=objects)
 bin_file = env.Command(
-    'build/app_config.bin',
+    profile['bin_target'],
     elf,
     Action('$OBJCOPY -O binary $SOURCE $TARGET', 'OBJCOPY $SOURCE --> $TARGET')
 )
 hex_file = env.Command(
-    'build/app_config.hex',
+    profile['hex_target'],
     elf,
     Action('$OBJCOPY -O ihex $SOURCE $TARGET', 'OBJCOPY $SOURCE --> $TARGET')
 )
