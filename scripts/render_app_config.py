@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import Any
 
 
-TEMPLATE_DIR = Path("templates")
-OUTPUT_DIR = Path("output")
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+TEMPLATE_DIR = PROJECT_ROOT / "resources" / "templates"
+OUTPUT_DIR = PROJECT_ROOT / "output"
 HEADER_TEMPLATE_DEFAULT = TEMPLATE_DIR / "app_config.h.tpl"
 SOURCE_TEMPLATE_DEFAULT = TEMPLATE_DIR / "app_config.c.tpl"
 HEADER_OUTPUT_DEFAULT = OUTPUT_DIR / "app_config.h"

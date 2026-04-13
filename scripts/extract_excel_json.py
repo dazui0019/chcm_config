@@ -11,11 +11,13 @@ from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
 
-WORKBOOK_DEFAULT = Path("xlsx") / "E01 CHCM-1C-2C1V(得邦)_config_Dataset_LEFT_V0.2.xlsx"
-KCONFIG_FILE = Path("Kconfig")
-KCONFIG_CONFIG_DEFAULT = Path(".config")
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+WORKBOOK_DEFAULT = PROJECT_ROOT / "xlsx" / "E01 CHCM-1C-2C1V(得邦)_config_Dataset_LEFT_V0.2.xlsx"
+KCONFIG_FILE = PROJECT_ROOT / "Kconfig"
+KCONFIG_CONFIG_DEFAULT = PROJECT_ROOT / ".config"
 KCONFIG_WORKBOOK_SYMBOL = "CHCM_WORKBOOK_PATH"
-OUTPUT_DIR = Path("output")
+OUTPUT_DIR = PROJECT_ROOT / "output"
 OUTPUT_SCHEMA_VERSION = 2
 FIELD_KEYS = {
     "C": "config_word_0",

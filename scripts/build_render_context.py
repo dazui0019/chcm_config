@@ -9,12 +9,16 @@ from pathlib import Path
 from typing import Any
 
 
-INPUT_DIR_DEFAULT = Path("output")
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+RESOURCE_DIR = PROJECT_ROOT / "resources"
+TEMPLATE_DIR = RESOURCE_DIR / "templates"
+INPUT_DIR_DEFAULT = PROJECT_ROOT / "output"
 KCONFIG_JSON_DEFAULT = INPUT_DIR_DEFAULT / "Kconfig.json"
 OUTPUT_DEFAULT = INPUT_DIR_DEFAULT / "render_context.json"
-HEADER_TEMPLATE_DEFAULT = Path("templates") / "app_config.h.tpl"
-SOURCE_TEMPLATE_DEFAULT = Path("templates") / "app_config.c.tpl"
-ANIMATION_BOARD_TYPE_MAP_DEFAULT = Path("animation_board_type_map.json")
+HEADER_TEMPLATE_DEFAULT = TEMPLATE_DIR / "app_config.h.tpl"
+SOURCE_TEMPLATE_DEFAULT = TEMPLATE_DIR / "app_config.c.tpl"
+ANIMATION_BOARD_TYPE_MAP_DEFAULT = RESOURCE_DIR / "animation_board_type_map.json"
 OUTPUT_SCHEMA_VERSION = 1
 PLACEHOLDER_PATTERN = re.compile(r"@([A-Z0-9_]+)@")
 BLOCK_PLACEHOLDER_TOKENS = ("DEFINITION", "DEFINITIONS", "DECLARATION", "DECLARATIONS", "MACRO", "MACROS")

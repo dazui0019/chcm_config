@@ -7,8 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parent
-DEFAULT_NM = REPO_ROOT / "toolchain" / "mingw-w64-x86_64-arm-none-eabi" / "bin" / "arm-none-eabi-nm.exe"
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+DEFAULT_NM = PROJECT_ROOT / "toolchain" / "mingw-w64-x86_64-arm-none-eabi" / "bin" / "arm-none-eabi-nm.exe"
 TARGET_SYMBOLS = ("__cflash_start", "__cflash_end")
 SKIP_NAME_PREFIXES = (".", "$")
 SKIP_NAME_EXACT: set[str] = set()
@@ -56,10 +57,11 @@ def add_common_nm_argument(parser: argparse.ArgumentParser) -> None:
         help=f"Path to arm-none-eabi-nm. Default: {DEFAULT_NM}",
     )
 
+
 def run_nm(nm_path: Path, elf_path: Path) -> list[Symbol]:
     completed = subprocess.run(
         [str(nm_path), "-n", str(elf_path)],
-        cwd=REPO_ROOT,
+        cwd=PROJECT_ROOT,
         check=True,
         text=True,
         capture_output=True,

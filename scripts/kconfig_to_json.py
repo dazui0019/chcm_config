@@ -8,9 +8,11 @@ from typing import Any
 from kconfiglib import BOOL, HEX, INT, STRING, TRISTATE, TYPE_TO_STR, Kconfig
 
 
-KCONFIG_FILE_DEFAULT = Path("Kconfig")
-CONFIG_FILE_DEFAULT = Path(".config")
-OUTPUT_DEFAULT = Path("output") / "Kconfig.json"
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+KCONFIG_FILE_DEFAULT = PROJECT_ROOT / "Kconfig"
+CONFIG_FILE_DEFAULT = PROJECT_ROOT / ".config"
+OUTPUT_DEFAULT = PROJECT_ROOT / "output" / "Kconfig.json"
 OUTPUT_SCHEMA_VERSION = 1
 PROJECT_SYMBOLS = ("PROJECT_A_SMALL", "PROJECT_A_PLUS_PLUS", "PROJECT_A_PLUS")
 VERSION_SYMBOLS = ("COM_VERSION_V4", "COM_VERSION_V5")

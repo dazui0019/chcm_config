@@ -1,6 +1,6 @@
 import os
 
-linker_script = os.path.join('config_bin.ld')
+linker_script = os.path.join('resources', 'linker', 'config_bin.ld')
 map_file = os.path.join('build', 'app_config.map')
 
 gcc_path = os.path.abspath(

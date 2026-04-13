@@ -6,13 +6,16 @@ import sys
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parent
-CONFIG_DEFAULT = Path(".config")
-KCONFIG_DEFAULT = Path("Kconfig")
-OUTPUT_DIR_DEFAULT = Path("output")
-HEADER_TEMPLATE_DEFAULT = Path("templates") / "app_config.h.tpl"
-SOURCE_TEMPLATE_DEFAULT = Path("templates") / "app_config.c.tpl"
-ANIMATION_BOARD_TYPE_MAP_DEFAULT = Path("animation_board_type_map.json")
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+RESOURCE_DIR = PROJECT_ROOT / "resources"
+TEMPLATE_DIR = RESOURCE_DIR / "templates"
+CONFIG_DEFAULT = PROJECT_ROOT / ".config"
+KCONFIG_DEFAULT = PROJECT_ROOT / "Kconfig"
+OUTPUT_DIR_DEFAULT = PROJECT_ROOT / "output"
+HEADER_TEMPLATE_DEFAULT = TEMPLATE_DIR / "app_config.h.tpl"
+SOURCE_TEMPLATE_DEFAULT = TEMPLATE_DIR / "app_config.c.tpl"
+ANIMATION_BOARD_TYPE_MAP_DEFAULT = RESOURCE_DIR / "animation_board_type_map.json"
 ANSI_RED = "\033[31m"
 ANSI_BOLD = "\033[1m"
 ANSI_RESET = "\033[0m"
@@ -28,7 +31,7 @@ def run_step(step_no: int, total_steps: int, title: str, command: list[str]) -> 
     print(f"[{step_no}/{total_steps}] {title}", flush=True)
     print(" ".join(command), flush=True)
     try:
-        subprocess.run(command, cwd=REPO_ROOT, check=True)
+        subprocess.run(command, cwd=PROJECT_ROOT, check=True)
     except subprocess.CalledProcessError as exc:
         raise SystemExit(format_error_message(f"Step failed [{step_no}/{total_steps}] {title}")) from None
 
@@ -90,7 +93,7 @@ def main() -> None:
 
     extract_command = [
         sys.executable,
-        "extract_excel_json.py",
+        str(SCRIPT_DIR / "extract_excel_json.py"),
         "--config",
         str(args.config),
         "--output",
@@ -101,7 +104,7 @@ def main() -> None:
 
     kconfig_command = [
         sys.executable,
-        "kconfig_to_json.py",
+        str(SCRIPT_DIR / "kconfig_to_json.py"),
         "--kconfig",
         str(args.kconfig),
         "--config",
@@ -112,7 +115,7 @@ def main() -> None:
 
     build_context_command = [
         sys.executable,
-        "build_render_context.py",
+        str(SCRIPT_DIR / "build_render_context.py"),
         "--input-dir",
         str(output_dir),
         "--kconfig-json",
@@ -129,7 +132,7 @@ def main() -> None:
 
     render_command = [
         sys.executable,
-        "render_app_config.py",
+        str(SCRIPT_DIR / "render_app_config.py"),
         "--context",
         str(render_context),
         "--header-template",

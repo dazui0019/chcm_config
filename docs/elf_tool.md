@@ -1,6 +1,6 @@
 # elf_tool
 
-`elf_tool.py` 用于检查 `ELF` 文件中和 `cflash` 配置区相关的地址信息，当前提供两个子命令：
+`scripts/elf_tool.py` 用于检查 `ELF` 文件中和 `cflash` 配置区相关的地址信息，当前提供两个子命令：
 
 - `compare`: 对比两个 `ELF` 在 `cflash` 范围内的符号地址是否一致
 - `cflash-range`: 读取指定 `ELF` 的 `__cflash_start` 和 `__cflash_end`
@@ -8,7 +8,7 @@
 脚本位置：
 
 ```text
-chcm_config/elf_tool.py
+chcm_config/scripts/elf_tool.py
 ```
 
 默认使用的 `nm` 工具：
@@ -22,14 +22,14 @@ chcm_config/toolchain/mingw-w64-x86_64-arm-none-eabi/bin/arm-none-eabi-nm.exe
 当前 `chcm_config` 已经使用 `uv` 管理 Python 环境，推荐在 `chcm_config` 目录中运行：
 
 ```powershell
-uv run python elf_tool.py -h
+uv run python scripts/elf_tool.py -h
 ```
 
 ## 命令总览
 
 ```powershell
-uv run python elf_tool.py compare <reference_elf> <candidate_elf> [--detail]
-uv run python elf_tool.py cflash-range <elf>
+uv run python scripts/elf_tool.py compare <reference_elf> <candidate_elf> [--detail]
+uv run python scripts/elf_tool.py cflash-range <elf>
 ```
 
 ## compare
@@ -56,13 +56,13 @@ uv run python elf_tool.py cflash-range <elf>
 ### 基本用法
 
 ```powershell
-uv run python elf_tool.py compare ..\build\CHY_A_plus_plus.elf build\app_config.elf
+uv run python scripts/elf_tool.py compare ..\build\CHY_A_plus_plus.elf build\app_config.elf
 ```
 
 ### 显示全部符号地址
 
 ```powershell
-uv run python elf_tool.py compare ..\build\CHY_A_plus_plus.elf build\app_config.elf --detail
+uv run python scripts/elf_tool.py compare ..\build\CHY_A_plus_plus.elf build\app_config.elf --detail
 ```
 
 ### 输出说明
@@ -109,7 +109,7 @@ detail:
 ### 基本用法
 
 ```powershell
-uv run python elf_tool.py cflash-range build\app_config.elf
+uv run python scripts/elf_tool.py cflash-range build\app_config.elf
 ```
 
 ### 示例输出
@@ -126,13 +126,13 @@ size           = 0x8780 (34688 bytes)
 先看 `chcm_config` 当前生成的配置区范围：
 
 ```powershell
-uv run python elf_tool.py cflash-range build\app_config.elf
+uv run python scripts/elf_tool.py cflash-range build\app_config.elf
 ```
 
 再对比主工程 `ELF` 和 `chcm_config` `ELF` 的 `cflash` 符号：
 
 ```powershell
-uv run python elf_tool.py compare ..\build\CHY_A_plus_plus.elf build\app_config.elf --detail
+uv run python scripts/elf_tool.py compare ..\build\CHY_A_plus_plus.elf build\app_config.elf --detail
 ```
 
 如果 `compare` 返回 `result: all cflash symbol addresses match`，就说明当前参与比较的 `cflash` 命名符号地址一致。
