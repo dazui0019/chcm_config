@@ -47,8 +47,30 @@ env.Replace(
     COMPILATIONDB_COMSTR=None,
 )
 
-elf = env.Program(target='output/app_config.elf', source=['output/app_config.c'])
-bin_file = env.Command('output/app_config.bin', elf, '$OBJCOPY -O binary $SOURCE $TARGET')
+env.Append(CPPPATH=[
+    '../Platform/Common',
+    '../Platform/generated',
+    '../McuLib/S32K3XX/BaseNXP_TS_T40D34M50I0R0/include',
+    '../App/app_swi',
+    '../App/app_swi/config'
+    ])
+
+cfg_obj = env.Object(
+    target='build/obj/app_config.o',
+    source='../App/app_config.c'
+)
+
+swi_obj = env.Object(
+    target='build/obj/app_swi_config.o',
+    source='../App/app_swi/config/app_swi_config.c'
+)
+
+elf = env.Program(target='build/app_config.elf', source=[cfg_obj, swi_obj])
+bin_file = env.Command(
+    'build/app_config.bin',
+    elf,
+    Action('$OBJCOPY -O binary $SOURCE $TARGET', 'OBJCOPY $SOURCE --> $TARGET')
+)
 
 # 默认生成bin文件, 直接在终端输入 scons 即可
 Default(bin_file)
