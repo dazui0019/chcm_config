@@ -62,8 +62,6 @@ MEMORY
 
 HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x00000400;
 
-ENTRY(Reset_Handler)
-
 SECTIONS
 {
     .configFLASH __CONFIG_ADDRESS : AT(__CONFIG_ADDRESS)
