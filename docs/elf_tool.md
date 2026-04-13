@@ -3,7 +3,7 @@
 `scripts/elf_tool.py` 用于检查 `ELF` 文件中和 `cflash` 配置区相关的地址信息，当前提供两个子命令：
 
 - `compare`: 对比两个 `ELF` 在 `cflash` 范围内的符号地址是否一致
-- `cflash-range`: 读取指定 `ELF` 的 `__cflash_start` 和 `__cflash_end`
+- `cflash-range`: 读取指定 `ELF` 的 `__cflash_start` 和 `__cflash_end`, **所以链接脚本中一定要有这两个符号**。
 
 脚本位置：
 
