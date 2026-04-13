@@ -58,6 +58,14 @@ CONFIG_CHCM_WORKBOOK_PATH="xlsx/E01 CHCM-1C-2C1V(得邦)_config_Dataset_LEFT_V0.
 uv sync
 ```
 
+## SCons 构建
+
+`Sconstruct` 会把 `../App/app_config.c` 和 `../App/app_swi/config/app_swi_config.c` 编译成 `.o`，再链接生成 `elf/bin/hex`：
+
+```powershell
+scons
+```
+
 ## 脚本运行
 
 当前支持两种运行方式：
