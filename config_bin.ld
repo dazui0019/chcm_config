@@ -1,6 +1,6 @@
 MEMORY
 {
-    int_cflash              : ORIGIN = 0x0, LENGTH = 0x001D4000
+    int_cflash              : ORIGIN = 0x00500000, LENGTH = 0x001D4000
 }
 
 SECTIONS
