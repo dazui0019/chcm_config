@@ -34,55 +34,20 @@ env.Append(CPPDEFINES=[
 ])
 
 env.Append(CCFLAGS=[
-    '-O1',
-    '-fdiagnostics-color=always',
-    '-ffunction-sections',
     '-fdata-sections',
-    '-fno-diagnostics-show-caret',
     '-mcpu=cortex-m7',
     '-mthumb',
     '-mlittle-endian',
     '-mfloat-abi=hard',
     '-mfpu=fpv5-sp-d16',
-    '-specs=nano.specs',
-    '-specs=nosys.specs',
 ])
 
 env.Append(CFLAGS=[
     '-std=c99',
-    '-pedantic',
-    '-Wall',
-    '-Wextra',
-    '-fmessage-length=0',
     '-funsigned-char',
     '-funsigned-bitfields',
-    '-fomit-frame-pointer',
     '-fno-short-enums',
     '-fno-common',
-    '-Wunused',
-    '-Wsign-compare',
-    '-Werror=implicit-function-declaration',
-    '-Wundef',
-    '-Wstrict-prototypes',
-    '-Wno-unknown-pragmas',
-    '-Wdouble-promotion',
-])
-
-env.Append(ASFLAGS=[
-    '-x',
-    'assembler-with-cpp',
-    '-O1',
-    '-fdiagnostics-color=always',
-    '-ffunction-sections',
-    '-fdata-sections',
-    '-fno-diagnostics-show-caret',
-    '-mcpu=cortex-m7',
-    '-mthumb',
-    '-mlittle-endian',
-    '-mfloat-abi=hard',
-    '-mfpu=fpv5-sp-d16',
-    '-specs=nano.specs',
-    '-specs=nosys.specs',
 ])
 
 env.Append(LINKFLAGS=[
@@ -91,15 +56,9 @@ env.Append(LINKFLAGS=[
     '-mlittle-endian',
     '-mfloat-abi=hard',
     '-mfpu=fpv5-sp-d16',
-    '-specs=nano.specs',
-    '-specs=nosys.specs',
-    '-nostartfiles',
-    '-Wl,--gc-sections',
     '-Wl,-Map=' + map_file,
     '-T' + linker_script,
 ])
-
-env.Append(LIBS=['m'])
 
 env.Replace(
     CCCOMSTR='CC      $SOURCE',
