@@ -12,6 +12,10 @@
 
 ## 处理流程
 
+### 准备excel文件
+
+把`(English+Chinese)E01_A+_ADS_CheryDatasetParameterList(to得邦).xlsx`中`E01 TI Wipping`、`Unlock Mode1`和`Lock Mode1`这三个sheet复制到`E01 CHCM-1C-2C1V(得邦)_config_Dataset_LEFT_V0.2.xlsx`, 用来获取动画数据。
+
 ### 分步脚本
 
 - `scripts/extract_excel_json.py`
