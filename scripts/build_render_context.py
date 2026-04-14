@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from pipeline_utils import write_text_if_changed
+
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
@@ -2311,8 +2313,7 @@ def main() -> None:
             required_placeholders,
             animation_board_type_map,
         )
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(render_json_compact(payload) + "\n", encoding="utf-8")
+        changed = write_text_if_changed(args.output, render_json_compact(payload) + "\n")
     except Exception as exc:
         print(format_error_message(str(exc)), file=sys.stderr)
         raise SystemExit(1) from None
@@ -2320,7 +2321,7 @@ def main() -> None:
     print(f"Input dir: {args.input_dir}")
     print(f"Kconfig JSON: {args.kconfig_json}")
     print(f"Animation board/type map: {args.animation_board_type_map}")
-    print(f"Wrote {args.output}")
+    print(f"{'Wrote' if changed else 'Unchanged'} {args.output}")
 
 
 if __name__ == "__main__":

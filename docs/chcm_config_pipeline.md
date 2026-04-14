@@ -43,6 +43,42 @@ uv run python scripts/run_pipeline.py
 - `output/app_config.h`
 - `output/app_config.c`
 
+默认还会在 `output/.pipeline_state.json` 记录每一步上次成功执行时的输入时间戳和输出文件集合，用来支持增量执行。
+
+## 增量生成行为
+
+`scripts/run_pipeline.py` 现在会按步骤判断是否需要重跑，默认使用文件修改时间，不计算 MD5。
+
+过期判定规则：
+
+- 状态文件不存在时，执行该步骤
+- 任一输入文件不存在时，执行该步骤
+- 任一输入文件的修改时间变化时，执行该步骤
+- 任一输出文件不存在时，执行该步骤
+- 其他情况直接 `Skip`
+
+当前 4 个步骤的依赖关系如下：
+
+1. `Extract Excel JSON`
+   - 输入：workbook、`scripts/extract_excel_json.py`
+   - 如果没有显式传 `--workbook`，还会把 `.config` 和 `Kconfig` 算作依赖
+   - 输出：当前 workbook 实际生成的各个 sheet JSON
+2. `Export Kconfig JSON`
+   - 输入：`.config`、`Kconfig`、`scripts/kconfig_to_json.py`
+   - 输出：`output/Kconfig.json`
+3. `Build render_context.json`
+   - 输入：Excel JSON、`output/Kconfig.json`、模板文件、`resources/animation_board_type_map.json`、`scripts/build_render_context.py`
+   - 输出：`output/render_context.json`
+4. `Render app_config.c and app_config.h`
+   - 输入：`output/render_context.json`、模板文件、`scripts/render_app_config.py`
+   - 输出：`output/app_config.h`、`output/app_config.c`
+
+说明：
+
+- 如果上游步骤本轮执行了，下游步骤也会重新执行一次，即使中间输出内容最终没有变化
+- 如果某一步重新执行后内容与现有文件完全一致，会打印 `Unchanged <path>`，并保留原文件时间戳
+- 如果需要强制全量重跑，删除 `output/.pipeline_state.json` 或整个 `output/` 目录即可
+
 ## 目录结构
 
 - `scripts/`
@@ -166,6 +202,13 @@ uv run python scripts/run_pipeline.py --workbook <excel路径> --config <.config
 - `--animation-board-type-map`
   - 动画灯板映射 JSON，默认 `resources/animation_board_type_map.json`
 
+默认行为：
+
+- 按步骤输出 `Run` 或 `Skip`
+- 使用 `output/.pipeline_state.json` 记录增量状态
+- 不会重写内容完全一致的最终输出文件
+- 不提供 `--force` 开关；需要全量重跑时直接删除状态文件或输出目录
+
 ### `scripts/extract_excel_json.py`
 
 把 Excel 中已支持的 sheet 提取为 JSON。
@@ -183,6 +226,8 @@ uv run python scripts/extract_excel_json.py
 - 自动转换工作簿中所有已支持的 sheet
 - 默认输出到 `output/<sheet_name>.json`
 - 匹配 sheet 名时会忽略首尾空格
+- 如果输出内容未变化，会打印 `Unchanged <path>`，不会重写文件
+- 批量模式下会自动删除当前 workbook 已不再生成的旧 sheet JSON
 
 参数：
 
@@ -233,6 +278,10 @@ uv run python scripts/kconfig_to_json.py --kconfig <Kconfig路径> --config <.co
 - `--output`
   - 输出 JSON 路径，默认 `output/Kconfig.json`
 
+默认行为补充：
+
+- 如果输出内容未变化，会打印 `Unchanged <path>`，不会重写文件
+
 ### `scripts/build_render_context.py`
 
 把 Excel JSON 和 `Kconfig.json` 合并为统一的渲染上下文。
@@ -268,6 +317,7 @@ uv run python scripts/build_render_context.py --input-dir <excel_json目录> --k
 - 还会生成模板使用的代码片段区块
 - 对于暂未完成业务映射的大段 C 代码，当前会先落成 `TODO` 注释 stub
 - `render_context.json` 的推荐结构可参考 [../resources/templates/README.md](../resources/templates/README.md)
+- 如果输出内容未变化，会打印 `Unchanged <path>`，不会重写文件
 
 ### `scripts/render_app_config.py`
 
@@ -295,6 +345,11 @@ uv run python scripts/render_app_config.py --context <context.json> --header-tem
   - 输出头文件路径，默认 `output/app_config.h`
 - `--source-output`
   - 输出源文件路径，默认 `output/app_config.c`
+
+默认行为补充：
+
+- 如果渲染结果与现有文件完全一致，会打印 `Unchanged <path>`，不会重写 `app_config.h/.c`
+- 这样下游依赖时间戳的编译流程就不会因为“内容没变但文件被重写”而误触发
 
 ## 输出结构约定
 

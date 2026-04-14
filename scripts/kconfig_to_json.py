@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from kconfiglib import BOOL, HEX, INT, STRING, TRISTATE, TYPE_TO_STR, Kconfig
+from pipeline_utils import write_text_if_changed
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -149,12 +150,11 @@ def main() -> None:
         kconfig.load_config(str(args.config))
 
     payload = build_output_payload(kconfig, args.kconfig, args.config)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(render_json_compact(payload) + "\n", encoding="utf-8")
+    changed = write_text_if_changed(args.output, render_json_compact(payload) + "\n")
 
     print(f"Kconfig: {args.kconfig}")
     print(f"Config: {args.config}")
-    print(f"Wrote {args.output}")
+    print(f"{'Wrote' if changed else 'Unchanged'} {args.output}")
 
 
 if __name__ == "__main__":

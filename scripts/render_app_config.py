@@ -6,6 +6,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from pipeline_utils import write_text_if_changed
+
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
@@ -75,9 +77,8 @@ def render_template(template_path: Path, context: dict[str, str]) -> str:
     return PLACEHOLDER_PATTERN.sub(lambda match: context[match.group(1)], template_text)
 
 
-def write_rendered_file(output_path: Path, content: str) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(content, encoding="utf-8")
+def write_rendered_file(output_path: Path, content: str) -> bool:
+    return write_text_if_changed(output_path, content)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -122,12 +123,12 @@ def main() -> None:
     rendered_header = render_template(args.header_template, context)
     rendered_source = render_template(args.source_template, context)
 
-    write_rendered_file(args.header_output, rendered_header)
-    write_rendered_file(args.source_output, rendered_source)
+    header_changed = write_rendered_file(args.header_output, rendered_header)
+    source_changed = write_rendered_file(args.source_output, rendered_source)
 
     print(f"Context: {args.context}")
-    print(f"Wrote {args.header_output}")
-    print(f"Wrote {args.source_output}")
+    print(f"{'Wrote' if header_changed else 'Unchanged'} {args.header_output}")
+    print(f"{'Wrote' if source_changed else 'Unchanged'} {args.source_output}")
 
 
 if __name__ == "__main__":

@@ -47,6 +47,15 @@ uv sync
 uv run python scripts/run_pipeline.py
 ```
 
+现在 `run_pipeline.py` 已经支持按步骤增量执行：
+
+- 如果 Excel、`.config`、模板等依赖文件都没变化，对应步骤会直接 `Skip`
+- 如果步骤执行后生成内容与现有文件完全一致，会打印 `Unchanged <path>`，且不会改输出文件时间戳
+- 流水线状态会记录到 `output/.pipeline_state.json`
+- 在批量提取 Excel sheet 时，会自动清理当前工作簿里已经不存在的旧 sheet JSON
+
+如果需要强制全量重跑，删除 `output/.pipeline_state.json` 或整个 `output/` 目录即可。
+
 ## 当前支持的配置范围
 
 - `HCM_PriLIN_Matrix`

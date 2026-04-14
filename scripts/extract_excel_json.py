@@ -9,6 +9,7 @@ from typing import Any
 from kconfiglib import Kconfig
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+from pipeline_utils import write_text_if_changed
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -19,6 +20,7 @@ KCONFIG_CONFIG_DEFAULT = PROJECT_ROOT / ".config"
 KCONFIG_WORKBOOK_SYMBOL = "CHCM_WORKBOOK_PATH"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 OUTPUT_SCHEMA_VERSION = 2
+PIPELINE_RESERVED_JSON_NAMES = {"Kconfig.json", "render_context.json"}
 FIELD_KEYS = {
     "C": "config_word_0",
     "D": "value_1",
@@ -1458,6 +1460,40 @@ def resolve_output_path(output_path: Path | None, sheet_name: str, multi_sheet: 
     return output_path / f"{sheet_name}.json"
 
 
+def resolve_batch_output_dir(output_path: Path | None) -> Path:
+    if output_path is None:
+        return OUTPUT_DIR
+    if output_path.exists() and output_path.is_file():
+        raise ValueError("未指定 --sheet 时，--output 需要是目录路径，不能是文件。")
+    if not output_path.exists() and output_path.suffix.lower() == ".json":
+        raise ValueError("未指定 --sheet 时，--output 需要是目录路径，不能是单个 JSON 文件。")
+    return output_path
+
+
+def is_excel_output_json_path(path: Path) -> bool:
+    return (
+        path.suffix.lower() == ".json"
+        and path.name not in PIPELINE_RESERVED_JSON_NAMES
+        and is_supported_sheet_name(path.stem)
+    )
+
+
+def remove_stale_batch_outputs(output_dir: Path, expected_paths: set[Path]) -> list[Path]:
+    if not output_dir.is_dir():
+        return []
+
+    removed_paths: list[Path] = []
+    for path in sorted(output_dir.glob("*.json")):
+        resolved_path = path.resolve()
+        if not is_excel_output_json_path(resolved_path):
+            continue
+        if resolved_path in expected_paths:
+            continue
+        resolved_path.unlink()
+        removed_paths.append(resolved_path)
+    return removed_paths
+
+
 def find_sheet(workbook, requested_sheet: str) -> Worksheet:
     matches = [sheet for sheet in workbook.worksheets if sheet.title.strip() == requested_sheet.strip()]
     if not matches:
@@ -1554,18 +1590,25 @@ def main() -> None:
     try:
         worksheets = [find_sheet(workbook, args.sheet)] if args.sheet else find_supported_sheets(workbook)
         batch_mode = args.sheet is None
+        expected_output_paths = {
+            resolve_output_path(args.output, worksheet.title.strip(), multi_sheet=True).resolve()
+            for worksheet in worksheets
+        }
 
         print(f"Workbook: {workbook_path}")
+        if batch_mode:
+            output_dir = resolve_batch_output_dir(args.output)
+            for removed_path in remove_stale_batch_outputs(output_dir, expected_output_paths):
+                print(f"Removed {removed_path}")
         for worksheet in worksheets:
             value_worksheet = find_sheet(value_workbook, worksheet.title)
             parsed = parse_sheet(worksheet, value_worksheet)
             output_payload = condense_sheet(parsed)
             output_path = resolve_output_path(args.output, parsed["sheet_name"], multi_sheet=batch_mode)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(render_json_compact(output_payload) + "\n", encoding="utf-8")
+            changed = write_text_if_changed(output_path, render_json_compact(output_payload) + "\n")
             item_count = count_output_items(output_payload)
 
-            print(f"Wrote {output_path}")
+            print(f"{'Wrote' if changed else 'Unchanged'} {output_path}")
             print(f"Sheet: {parsed['sheet_name_raw']!r}")
             print(f"Items: {item_count}")
     finally:
