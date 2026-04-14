@@ -60,7 +60,7 @@ uv run python scripts/run_pipeline.py
 
 - 详细流水线说明：[`docs/chcm_config_pipeline.md`](docs/chcm_config_pipeline.md)
 - 模板设计说明：[`resources/templates/README.md`](resources/templates/README.md)
-- 其他文档：[`docs/elf_tool.md`](docs/elf_tool.md)、[`docs/sons.md`](docs/sons.md)
+- 其他文档：[`docs/elf_tool.md`](docs/elf_tool.md)、[`docs/scons.md`](docs/scons.md)
 
 ## 使用说明
 
