@@ -102,5 +102,5 @@ SECTIONS
         . = ALIGN(128);
         __cflash_end = .;
 
-    } > int_cflash
+    } > int_cflash = 0xFF
 }
