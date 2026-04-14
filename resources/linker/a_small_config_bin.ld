@@ -64,9 +64,17 @@ HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x00000400;
 
 SECTIONS
 {
-    .configFLASH __CONFIG_ADDRESS : AT(__CONFIG_ADDRESS)
+    .config_header :
     {
         __cflash_start = .;
+        . = ALIGN(4);
+        KEEP(*(.config_header))
+        . = ALIGN(4);
+        . = ORIGIN(CONFIG_HEADER) + LENGTH(CONFIG_HEADER);
+    } > CONFIG_HEADER = 0xFF
+    
+    .configFLASH __CONFIG_ADDRESS : AT(__CONFIG_ADDRESS)
+    {
         . = ALIGN(4);
         KEEP(*(.parameter_config_0))
         KEEP(*(.parameter_config_1))
@@ -159,5 +167,6 @@ SECTIONS
         KEEP(*(.parameter_config))
         . = ALIGN(4);
         __cflash_end = .;
-    } > CONFIG
+        . = ORIGIN(CONFIG) + LENGTH(CONFIG);
+    } > CONFIG = 0xFF
 }

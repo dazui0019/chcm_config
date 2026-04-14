@@ -130,13 +130,22 @@ BUILD_PROFILES = {
         ],
         'cpppath': [
             '../App',
+            '../Platform/Common',
+            '../Platform/generated',
+            '../McuLib/S32K144/BaseNXP_TS_T40D2M20I0R0/include',
+            '../App/app_swi',
+            '../App/app_swi/config',
             '../Platform/platf_flash'
         ],
         'objects': [
             {
                 'target': 'build/obj/app_config.o',
                 'source': '../App/app_config.c',
-            }
+            },
+            {
+                'target': 'build/obj/app_swi_config.o',
+                'source': '../App/app_swi/config/app_swi_config.c',
+            },
         ],
         'elf_target': 'build/app_config.elf',
         'bin_target': 'build/app_config.bin',
