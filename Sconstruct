@@ -1,4 +1,5 @@
 import os
+import sys
 
 ARM_GCC_ROOT = os.path.join(
     r'D:\environment',
@@ -207,10 +208,21 @@ hex_file = env.Command(
     elf,
     Action('$OBJCOPY -O ihex $SOURCE $TARGET', 'OBJCOPY $SOURCE --> $TARGET')
 )
+signature_targets = ['build/app_config.sig', 'build/app_config.txt']
+signature_command = (
+    f'"{sys.executable}" scripts/sign_artifact.py --txt '
+    f'--output {signature_targets[0]} $SOURCE'
+)
+signature_file = env.Command(
+    signature_targets,
+    bin_file,
+    Action(signature_command, 'SIGN    $SOURCE --> build/app_config.sig, build/app_config.txt')
+)
 
-# 默认生成 bin 和 hex 文件, 直接在终端输入 scons 即可
-Default([bin_file, hex_file])
+# 默认生成 bin、hex、sig 和 txt 文件, 直接在终端输入 scons 即可
+Default([bin_file, hex_file, signature_file])
 
-# 在终端输入 scons bin 或 scons hex 可以单独生成对应文件。
+# 在终端输入 scons bin、hex 或 sign 可以单独生成对应文件。
 env.Alias('bin', bin_file)
 env.Alias('hex', hex_file)
+env.Alias('sign', signature_file)
